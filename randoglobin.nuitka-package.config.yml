@@ -1,0 +1,5 @@
+- module-name: "randoglobin"
+  data-files:
+    dirs:
+      - "files"
+      - "lang"

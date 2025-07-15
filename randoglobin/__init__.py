@@ -1,0 +1,1 @@
+from randoglobin.main import main as main
