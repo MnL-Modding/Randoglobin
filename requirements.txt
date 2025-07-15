@@ -1,0 +1,9 @@
+cached_path==1.7.3
+mnllib==0.2.3
+ndspy==4.2.0
+Pillow==11.3.0
+PySide6==6.8.2.1
+PySide6==6.9.1
+PySide6_Addons==6.8.2.1
+PySide6_Essentials==6.8.2.1
+rustimport==1.7.1
