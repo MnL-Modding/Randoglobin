@@ -15,7 +15,7 @@ This program is still in development, and will see far more features in the futu
 [The M&L Modding Discord Server](https://discord.gg/rhJ6HGyymJ) - Suggestions / Moral Support
 
 Translators:
-- Español <img alt="NA-ES Flag" src="randoglobin/lang/NA-ES.png" align="center"/> - [AngelThe_M](https://bsky.app/profile/angelthem.bsky.social)
+- Español ![NA-ES Flag](randoglobin/lang/NA-ES.png) - [AngelThe_M](https://bsky.app/profile/angelthem.bsky.social)
 
 # Running the Program
 There are 4 ways to run this program, from easiest to most complicated:
