@@ -10,8 +10,9 @@
     - from_filenames:
         relative_path: "files"
         prefixes:
-          - "armips."
+          - "armips"
         executable: "yes"
+        when: "win32"
 
 - module-name: "cached_path.schemes"
   anti-bloat:
