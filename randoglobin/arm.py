@@ -1,4 +1,5 @@
 import os
+import stat
 import shutil
 import subprocess
 import itertools

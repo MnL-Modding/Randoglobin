@@ -5,7 +5,6 @@ from io import BytesIO
 if '__compiled__' not in globals():
     import rustimport.import_hook
 
-import rustimport
 from PySide6 import QtCore, QtGui, QtWidgets
 from functools import partial
 from mnllib.bis import compress, decompress
