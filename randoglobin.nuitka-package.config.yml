@@ -8,8 +8,9 @@
       - "lang"
   dlls:
     - from_filenames:
+        relative_path: "files"
         prefixes:
-          - "armips"
+          - "armips."
         executable: "yes"
 
 - module-name: "cached_path.schemes"
