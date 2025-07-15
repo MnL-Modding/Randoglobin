@@ -1,7 +1,7 @@
 - module-name: "randoglobin"
   anti-bloat:
     no-auto-follow:
-      "rustimport": "Rust modules should be compiled in advance"
+      "rustimport": "Rust modules not being able to be compiled live"
   data-files:
     dirs:
       - "files"
