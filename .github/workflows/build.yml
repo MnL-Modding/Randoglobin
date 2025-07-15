@@ -39,6 +39,9 @@ jobs:
       - name: Download armips (M&L Modding fork)
         run: |
           curl -LO --output-dir 'randoglobin/files' 'https://github.com/MnL-Modding/armips/releases/latest/download/armips${{ runner.os == 'Windows' && '.exe' || '' }}'
+          if [[ '${{ runner.os }}' != 'Windows' ]]; then
+            chmod -v +x randoglobin/files/armips
+          fi
       - name: Build executable
         uses: Nuitka/Nuitka-Action@main
         with:
