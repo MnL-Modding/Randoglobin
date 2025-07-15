@@ -1,5 +1,27 @@
 - module-name: "randoglobin"
+  anti-bloat:
+    no-auto-follow:
+      "rustimport": "Rust modules should be compiled in advance"
   data-files:
     dirs:
       - "files"
       - "lang"
+  dlls:
+    - from_filenames:
+        prefixes:
+          - "armips"
+        executable: "yes"
+
+- module-name: "cached_path.schemes"
+  anti-bloat:
+    description: "remove unnecessary dependencies"
+    no-auto-follow:
+      "beaker": "ignore"
+    replacements_re:
+      'from \.(?:gs|hf|r2|s3) import .*': ""
+      'for client in \(.*\):': "for client in (HttpClient,):"
+- module-name: "cached_path._cached_path"
+  anti-bloat:
+    description: "remove unnecessary dependencies"
+    replacements_plain:
+      "hf_get_from_cache,": ""

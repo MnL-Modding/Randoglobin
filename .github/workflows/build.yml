@@ -26,9 +26,19 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: false
+      - name: Install latest stable Rust
+        uses: crusty-pie/toolchain@v1
+        with:
+          toolchain: stable
       - name: Install dependencies
         run: |
           poetry install --no-interaction
+      - name: Compile Rust modules
+        run: |
+          python3 -m rustimport build --release
+      - name: Download armips (M&L Modding fork)
+        run: |
+          curl -LO --output-dir 'randoglobin/files' 'https://github.com/MnL-Modding/armips/releases/latest/download/armips${{ runner.os == 'Windows' && '.exe' || '' }}'
       - name: Build executable
         uses: Nuitka/Nuitka-Action@main
         with:
