@@ -196,16 +196,19 @@ def skip_tutorials(fevent_manager):
     for command in fevent_manager.fevent_chunks[0x0210][0].subroutines[2].commands:
         if command.command_id == 0x195 and command.arguments[0] == 0x1001:
             command.arguments[0] = 0x1004
+            command.arguments[2] = 0x0005 # not *exactly* sure what this does but it fixes an issue with fleeing the battle
 
     # trash pit: skip duo counterattack tutorial
     for command in fevent_manager.fevent_chunks[0x0207][0].subroutines[2].commands:
         if command.command_id == 0x195 and command.arguments[0] == 0x1002:
             command.arguments[0] = 0x1005
+            command.arguments[2] = 0x0005 # not *exactly* sure what this does but it fixes an issue with fleeing the battle
 
     # trash pit: special attack tutorial + replace elite goombules
     for command in fevent_manager.fevent_chunks[0x0214][0].subroutines[1].commands:
         if command.command_id == 0x195 and command.arguments[0] == 0x1003:
             command.arguments[0] = 0x1005
+            command.arguments[2] = 0x0005 # not *exactly* sure what this does but it fixes an issue with fleeing the battle
     fevent_manager.fevent_chunks[0x0214][0].header.sprite_groups[6] = 0x02000005
     fevent_manager.fevent_chunks[0x0214][0].header.palettes[3] = 0x02000004
 
@@ -213,5 +216,6 @@ def skip_tutorials(fevent_manager):
     for command in fevent_manager.fevent_chunks[0x021C][0].subroutines[3].commands:
         if command.command_id == 0x195 and command.arguments[0] == 0x1009:
             command.arguments[0] = 0x1007
+            command.arguments[2] = 0x0005 # not *exactly* sure what this does but it fixes an issue with fleeing the battle
 
     return fevent_manager

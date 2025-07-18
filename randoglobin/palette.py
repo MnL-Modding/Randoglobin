@@ -7,7 +7,6 @@ if '__compiled__' not in globals():
 
 from PySide6 import QtCore, QtGui, QtWidgets
 from functools import partial
-from mnllib.bis import compress, decompress
 
 from randoglobin.constants import *
 from randoglobin.image import create_BObj_sprite, create_MObj_sprite, create_textbox

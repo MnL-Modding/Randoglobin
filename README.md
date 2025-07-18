@@ -10,7 +10,7 @@ This program is still in development, and will see far more features in the futu
 
 [DimiDimit](https://github.com/DimiDimit) - Additional Code and Patches / [`mnllib.py`](https://github.com/MnL-Modding/mnllib.py) & [`.rs`](https://github.com/MnL-Modding/mnllib.rs)
 
-[Miik](https://bsky.app/profile/miikheaven.bsky.social) - Randoglobin Icon / Additional Graphics
+[MiiK](https://bsky.app/profile/miikheaven.bsky.social) - Randoglobin Icon / Additional Graphics
 
 [The M&L Modding Discord Server](https://discord.gg/rhJ6HGyymJ) - Suggestions / Moral Support
 
