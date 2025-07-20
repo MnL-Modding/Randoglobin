@@ -18,7 +18,7 @@ PEACH_CASTLE_INTRO_TREASURE_ENTRIES = [
     0x295, # room 0x217
 ]
 
-def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, badge_patch_offset, map_metadata_offset, map_group_offset, treasure_data_offset, map_icon_data_offset, overlays, treasure_strings, place_text, badge_names, spoiler_file): # TO DO: figure out what energy hold coins do
+def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, item_tables_offset, badge_patch_offset, map_metadata_offset, map_group_offset, treasure_data_offset, map_icon_data_offset, overlays, treasure_strings, place_text, badge_names, spoiler_file): # TO DO: figure out what energy hold coins do
     random.seed(seed)
     randomize_treasure_spots = settings.rando_junk.isChecked()
     randomize_shop_items = settings.rando_shop.isChecked()
@@ -43,6 +43,34 @@ def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, 
             arm9.write(b'\x02')
             arm9.seek(1, 1)
             arm9.write(b'\x00\x02\x00\x01')
+        arm9 = set_item_prices( # fix item prices
+            arm9,
+            item_tables_offset,
+            [
+                (0x2014,   400), # Heart Bean            previously:    1  coin 
+                (0x2015,   400), # Special Bean          previously:    1  coin 
+                (0x2016,   400), # Power Bean            previously:    1  coin 
+                (0x2017,   100), # Retry Clock           previously:    1  coin 
+                (0x3004,   300), # Good Badge            previously:  500 coins
+                (0x3007,  5000), # Excellent!! Badge     previously:   10 coins
+                (0x4001,    10), # Thin Wear             previously:    4 coins
+                (0x400C, 16000), # Master Wear           previously:    4 coins
+                (0x400F,  6000), # D-Star Wear           previously:    4 coins
+                (0x401A,  1500), # Bro Socks             previously:    4 coins
+                (0x402E,  1000), # Siphon Gloves         previously:    4 coins
+                (0x4041,  3000), # Advice Patch          previously:    4 coins
+                (0x4050,   200), # Challenge Medal       previously:    4 coins
+                (0x405A,  9600), # Ironclad Shell        previously:    4 coins
+                (0x405B,  3000), # Block Ring            previously:    4 coins
+                (0x405C, 18000), # King Shell            previously:    4 coins
+                (0x4066,  1500), # Block Band            previously:    4 coins
+                (0x4067,  4000), # Fury Band             previously:    4 coins
+                (0x406F,  1000), # Bone Fangs            previously:    4 coins
+                (0x4070, 10000), # Intruder Fangs        previously:    4 coins
+                (0x4071,  1500), # Block Fangs           previously:    4 coins
+                (0x407D,  3000), # Treasure Ring         previously:    4 coins
+            ]
+        )
     # ----------------------------------
     return_list = [treasure_file, shops_file]
     # ----------------------------------
@@ -99,6 +127,28 @@ def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, 
     
     arm9.seek(0)
     return *return_list, overlays[0], arm9.read(), spoiler_file
+
+
+def set_item_prices(arm9, item_tables_offset, item_list):
+    for item in item_list:
+        _item, price = item
+        item_type = _item >> 12
+        item_id = _item & 0xFFF
+        arm9.seek(item_tables_offset + ((item_type - 1) * 4))
+        arm9.seek(int.from_bytes(arm9.read(4), 'little') - 0x2004000)
+        match item_type:
+            case 1: # attack items
+                pass # ...don't have proper prices
+            case 2: # consumable items
+                arm9.seek((item_id * 24) + 12, 1)
+                arm9.write(price.to_bytes(2, 'little'))
+            case 3: # badge items
+                arm9.seek((item_id * 16) + 12, 1)
+                arm9.write(price.to_bytes(2, 'little'))
+            case 4: # gear items
+                arm9.seek((item_id * 32) + 12, 1)
+                arm9.write(price.to_bytes(2, 'little'))
+    return arm9
 
 
 def gather_all_treasure(treasure_file):

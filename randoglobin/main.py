@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import struct
+import hashlib
 import configparser
 from io import BytesIO
 from copy import deepcopy
@@ -56,8 +57,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.parent = parent
 
-        print(CONFIG_DIR)
-
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         if not (CONFIG_DIR / "config.ini").exists():
             setup_popup = SetupPopUp(parent)
@@ -85,40 +84,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # -------------------------------------------------------------------------------
 
-        QtWidgets.QMessageBox.information(
-            self,
-            self.tr("Choose a ROM"),
-            self.tr("Please choose a North American or European Bowser's Inside Story ROM to open."),
-        )
-        while True: # lmao
-            self.path, _selected_filter = QtWidgets.QFileDialog.getOpenFileName(
-                parent=self,
-                caption=self.tr("Open ROM"),
-                filter=NDS_ROM_FILENAME_FILTER,
-            )
-
-            if self.path == '':
-                sys.exit(2)
-
-            self.new_path = self.path
-            self.rom = ndspy.rom.NintendoDSRom.fromFile(self.path)
-
-            if self.rom.name != b"MARIO&LUIGI3":
-                QtWidgets.QMessageBox.warning(
-                self,
-                self.tr("Invalid ROM"),
-                self.tr("The chosen ROM is not a valid Bowser's Inside Story ROM."),
-                )
-                continue
-            
-            if self.rom.idCode[3] == NA_REGION_CODE or self.rom.idCode[3] == EU_REGION_CODE:
-                break
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    self.tr("Invalid ROM"),
-                    self.tr("The chosen ROM is not from a valid region.\n\nOnly a North American or European Bowser's Inside Story ROM will work."),
-                )
+        self.import_rom(False)
 
         # -------------------------------------------------------------------------------
 
@@ -129,7 +95,84 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.change_lang(i)
                 return
         
-        self.change_lang(LANGUAGES.index(["English (NA)",  "NA-EN", 1]))
+        self.change_lang(LANGUAGES.index(["English (NA)", "NA-EN", 1]))
+
+    def import_rom(self, repeat_import = True):
+        QtWidgets.QMessageBox.information(
+            self,
+            self.tr("Choose a ROM"),
+            self.tr("Please choose a North American or European Bowser's Inside Story ROM to open."),
+        )
+        while True: # lmao
+            path, _selected_filter = QtWidgets.QFileDialog.getOpenFileName(
+                parent=self,
+                caption=self.tr("Open ROM"),
+                filter=NDS_ROM_FILENAME_FILTER,
+            )
+
+            if path == '':
+                if repeat_import:
+                    return
+                else:
+                    sys.exit(2)
+
+            try:
+                rom = ndspy.rom.NintendoDSRom.fromFile(path)
+            except struct.error:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.tr("Invalid File"),
+                    self.tr("The chosen file is not a Nintendo DS ROM file."),
+                )
+                continue
+
+            if rom.name != b"MARIO&LUIGI3":
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.tr("Invalid ROM"),
+                    self.tr("The chosen ROM is not a valid Bowser's Inside Story ROM."),
+                )
+                continue
+            
+            if rom.idCode[3] == NA_REGION_CODE or rom.idCode[3] == EU_REGION_CODE:
+                self.rom = rom
+                self.path = path
+                self.new_path = self.path
+                if repeat_import:
+                    self.init_ui()
+                break
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    self.tr("Invalid ROM"),
+                    self.tr("The chosen ROM is not from a valid region.\n\nOnly a North American or European Bowser's Inside Story ROM will work."),
+                )
+        
+        chunk_size = 4096
+        hasher = hashlib.new("sha256")
+        with open(self.path, 'rb') as rom:
+            while True:
+                chunk = rom.read(chunk_size)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+        
+        rom_is_modded = True
+        match hasher.hexdigest():
+            case "9126963d6c6b6f81a9a666ba766e223781ff286634486e2a56d07a4c82eef4f1":
+                if self.rom.idCode[3] == NA_REGION_CODE:
+                    rom_is_modded = False
+            case "e7417640d1b0c65cb01924a4a38bd1fc6b330ead88710152f13677a896147f39":
+                if self.rom.idCode[3] == EU_REGION_CODE:
+                    rom_is_modded = False
+            # other region checksums will need to be calculated when support for those is added
+        
+        if rom_is_modded:
+            QtWidgets.QMessageBox.warning(
+                    self,
+                    self.tr("Modded ROM Detected"),
+                    self.tr("The chosen ROM appears to be modded.\nAlready modded ROMs, especially those that have already been randomized, may become unusable when exported with Randoglobin.\n\nProceed with caution."),
+                )
     
     def toggle_mute(self, state):
         self.muted = str(state)
@@ -205,6 +248,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.init_ui()
     
+    def show_credits(self):
+        credit = QtWidgets.QMessageBox()
+        credit.setWindowTitle("Credits")
+        credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        credit.setText(f'''{self.tr("Randoglobin Credits")}:<br><br>
+            <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {self.tr("Python Code")} / {self.tr("UI Design")}<br>
+            <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {self.tr("Additional Code and Patches")} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
+            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {self.tr("Randoglobin Icon")} / {self.tr("Additional Graphics")}
+            <br><br>
+            {self.tr("Translators")}:<br>
+            - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag" style="vertical-align: middle;"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a>
+        ''')
+        credit.setTextFormat(QtCore.Qt.RichText)
+        credit.exec()
+    
     def init_ui(self):
         translator = QtCore.QTranslator()
         if translator.load(str(LANG_DIR / f'{self.lang[1]}.qm')):
@@ -215,6 +273,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menuBar().clear()
         menu_bar = self.menuBar()
         menu_bar_file = menu_bar.addMenu(self.tr("&File"))
+        menu_bar_file.addAction(
+            self.tr("&Import"),
+            QtGui.QKeySequence.StandardKey.Open,
+            self.import_rom,
+        )
+        menu_bar_file.addSeparator() # -----------------------------------------
         menu_bar_file.addAction(
             self.tr("&Quit"),
             QtGui.QKeySequence.StandardKey.Quit,
@@ -239,8 +303,12 @@ class MainWindow(QtWidgets.QMainWindow):
         audio_mute.toggled.connect(self.toggle_mute)
         menu_bar_options.addAction(audio_mute)
 
+        menu_bar.addAction(
+            self.tr("&Credits"),
+            self.show_credits,
+        )
+
         arm9 = BytesIO(ndspy.codeCompression.decompress(self.rom.arm9))
-        self.normal_arm_length = len(self.rom.arm9)
         
         if self.rom.idCode[3] == NA_REGION_CODE or self.rom.idCode[3] == EU_REGION_CODE:                                           # US-base
             self.icon_overlay_BObj_offsets = (0x8C1C, 0x7548, 0x6290) # filedata, sprite groups, palette groups
@@ -847,6 +915,7 @@ class RandoWorker(QtCore.QObject):
                 treasure,
                 shops,
                 BytesIO(arm9_data),
+                [0, 0x000145C0][self.rom_base],
                 [0, 0x0004E6F8][self.rom_base],
                 [0, 0x000098A0][self.rom_base],
                 self.parent.overlay_FMap_offsets[1],
@@ -1037,16 +1106,3 @@ class RandoWorker(QtCore.QObject):
     
     def throw_error(self, error_mes, seed):
         self.error.emit(error_mes, seed)
-
-
-# Credits:
-
-# Marc - Python Code / UI Design
-# DimiDimit - Additional Code and Patches / mnllib
-# MiiK - Randoglobin Icon / Additional Graphics
-# M&L Modding - Suggestions / Moral Support
-
-
-# Translators:
-
-# AngelThe_M - NA Spanish

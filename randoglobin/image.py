@@ -57,7 +57,7 @@ def create_MObj_sprite(table_offsets, overlay, XObj_file, group_num, anim_num, f
     # ==================================================================
     # start assembling the sprite
 
-    if part_amt == 0 and len(anim_list) == 1:
+    if part_amt == 0:
         return QtGui.QPixmap(QtGui.QImage(ImageQt(Image.new("RGBA", (16, 16)))))
 
     for i in reversed(range(part_amt)):
