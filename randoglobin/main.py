@@ -57,8 +57,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.parent = parent
 
-        print(CONFIG_DIR)
-
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         if not (CONFIG_DIR / "config.ini").exists():
             setup_popup = SetupPopUp(parent)
@@ -257,11 +255,10 @@ class MainWindow(QtWidgets.QMainWindow):
         credit.setText(f'''{self.tr("Randoglobin Credits")}:<br><br>
             <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {self.tr("Python Code")} / {self.tr("UI Design")}<br>
             <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {self.tr("Additional Code and Patches")} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
-            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {self.tr("Randoglobin Icon")} / {self.tr("Additional Graphics")}<br>
-            <a href="https://discord.gg/rhJ6HGyymJ">The M&L Modding Discord Server</a><br>- {self.tr("Suggestions")} / {self.tr("Moral Support")}
+            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {self.tr("Randoglobin Icon")} / {self.tr("Additional Graphics")}
             <br><br>
             {self.tr("Translators")}:<br>
-            - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a>
+            - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag" style="vertical-align: middle;"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a>
         ''')
         credit.setTextFormat(QtCore.Qt.RichText)
         credit.exec()
@@ -918,6 +915,7 @@ class RandoWorker(QtCore.QObject):
                 treasure,
                 shops,
                 BytesIO(arm9_data),
+                [0, 0x000145C0][self.rom_base],
                 [0, 0x0004E6F8][self.rom_base],
                 [0, 0x000098A0][self.rom_base],
                 self.parent.overlay_FMap_offsets[1],
