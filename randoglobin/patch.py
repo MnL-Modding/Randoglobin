@@ -27,8 +27,14 @@ skip_intro_0a = Subroutine([
 skip_intro_0b = Subroutine([
     CodeCommand(0x014B, [0x7F, -0x10, 0x0020]),
     CodeCommand(0x014C),
-    CodeCommand(0x0008, [0x0001], Variable(0x2004)),
-    CodeCommand(0x0008, [0x0001], Variable(0x2030)),
+    CodeCommand(0x01AF, [0x00]), # progress story to state 0
+    CodeCommand(0x0008, [0x0001], Variable(0xE855)), # disable map star 1
+    CodeCommand(0x0008, [0x0001], Variable(0xE856)), # disable map star 2
+    CodeCommand(0x0008, [0x0001], Variable(0xE857)), # disable map star 3
+    CodeCommand(0x0008, [0x0001], Variable(0xE858)), # disable map star 4
+    CodeCommand(0x0008, [0x0001], Variable(0xE859)), # disable map star 5
+    CodeCommand(0x0008, [0x0001], Variable(0xE85A)), # disable toad town star 1
+    CodeCommand(0x0008, [0x0001], Variable(0xE85B)), # disable toad town star 2
     CodeCommand(0x0120, [0x0280, 0x0001, -0x00000003]),
     CodeCommand(0x0001),
 ])
@@ -36,8 +42,19 @@ skip_intro_0b = Subroutine([
 skip_intro_1a = Subroutine([
     CodeCommand(0x01D7, [0x00, 0x005A]),
     CodeCommand(0x01D7, [0x01, 0x005A]),
-    CodeCommand(0x0008, [0x0001], Variable(0x2004)),
-    CodeCommand(0x0008, [0x0001], Variable(0x2030)),
+    CodeCommand(0x00E8, [0x01]), # something to do with removing luigi i think
+    CodeCommand(0x00F3, [0x02]), # something to do with removing luigi i think
+    CodeCommand(0x01AF, [0x00]), # progress story to state 0
+    CodeCommand(0x01AF, [0x01]), # progress story to state 1
+    CodeCommand(0x0008, [0x0001], Variable(0xE855)), # disable map star 1
+    CodeCommand(0x0008, [0x0001], Variable(0xE856)), # disable map star 2
+    CodeCommand(0x0008, [0x0001], Variable(0xE857)), # disable map star 3
+    CodeCommand(0x0008, [0x0001], Variable(0xE858)), # disable map star 4
+    CodeCommand(0x0008, [0x0001], Variable(0xE859)), # disable map star 5
+    CodeCommand(0x0008, [0x0001], Variable(0xE85A)), # disable toad town star 1
+    CodeCommand(0x0008, [0x0001], Variable(0xE85B)), # disable toad town star 2
+    CodeCommand(0x0008, [0x0001], Variable(0x2004)), # disable bowser's fire
+    CodeCommand(0x0008, [0x0001], Variable(0x2030)), # ??? this variable is 1 at this point in the story (i think) so yeah sure why not
     CodeCommand(0x0041, [0x00000016], Variable(0x1000)), # give the player the 22 coins they missed in peach's castle
     CodeCommand(0x01AE),
     CodeCommand(0x011E, [0x0296, 0x0000, 0x0000, 0x0000, 0x00, 0x00, 0x0001, -0x00000003, 0x00]),

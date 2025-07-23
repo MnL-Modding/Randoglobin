@@ -13,7 +13,7 @@ from mnllib.nds import ARM9_OVERLAY_TABLE_PATH, DECOMPRESSED_ARM9_PATH, DECOMPRE
 
 from randoglobin.constants import FILES_DIR
 
-def apply_arm_patches(rom):
+def apply_arm_patches(rom, patches_needed):
     armips_path = FILES_DIR / f"armips{'.exe' if os.name == 'nt' else ''}"
     if not armips_path.exists():
         # armips doesn't exist in the files directory, use the globally installed one.
@@ -45,6 +45,10 @@ def apply_arm_patches(rom):
         except Exception:
             pass
 
+        patches_to_use = []
+        if patches_needed["shop_patch"]:
+            patches_to_use.extend(['-definelabel', 'F_MIXED_SHOP', '1'])
+
         try:
             subprocess.run(
                 [
@@ -52,7 +56,7 @@ def apply_arm_patches(rom):
                     '-stat',
                     '-strequ', 'PROFILE', 'release',
                     '-definelabel', 'F_ANTI_PIRACY_PATCH', '1',
-                    '-definelabel', 'F_MIXED_SHOP', '1',
+                    *patches_to_use,
                     'bis.asm',
                 ],
                 cwd=patching_dir,
