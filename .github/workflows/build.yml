@@ -51,7 +51,7 @@ jobs:
           enable-plugins: pyside6
           user-package-configuration-file: "randoglobin.nuitka-package.config.yml"
           windows-console-mode: hide
-          windows-icon-from-ico: "randoglobin/files/randoglobin.ico"
+          windows-icon-from-ico: "randoglobin/files/ico_randoglobin.ico"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

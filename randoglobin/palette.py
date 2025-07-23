@@ -1385,7 +1385,7 @@ class PaletteTab(QtWidgets.QWidget):
         self.use_custom_colors = QtWidgets.QCheckBox(self.tr("Use Personalized Colors"))
         self.use_custom_colors.checkStateChanged.connect(self.enable_custom_colors)
         main_layout.addWidget(self.use_custom_colors, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.use_custom_colors.setIcon(QtGui.QIcon(str(FILES_DIR / 'pal_alt.png')))
+        self.use_custom_colors.setIcon(QtGui.QIcon(str(FILES_DIR / 'img_pal_alt.png')))
 
         # ------------------------------------------
         line = QtWidgets.QFrame()

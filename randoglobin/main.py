@@ -44,19 +44,19 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
 
         self.setWindowTitle(APP_DISPLAY_NAME)
-        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
 
         self.globin_anim_timer = QtCore.QTimer()
         self.globin_anim_timer.setInterval(1000 / 30)
         self.globin_anim_timer.timeout.connect(self.animate_globin)
 
         self.rando_start_sfx = QtMultimedia.QSoundEffect(self)
-        self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "randoglobin_wait.wav"))
+        self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_wait.wav"))
         self.rando_start_sfx.setLoopCount(999)
         self.rando_end_sfx = QtMultimedia.QSoundEffect(self)
-        self.rando_end_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "randoglobin_success.wav"))
+        self.rando_end_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_success.wav"))
         self.rando_fail_sfx = QtMultimedia.QSoundEffect(self)
-        self.rando_fail_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "randoglobin_fail.wav"))
+        self.rando_fail_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_fail.wav"))
 
         self.parent = parent
 
@@ -241,7 +241,7 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 lang_ask = QtWidgets.QMessageBox()
                 lang_ask.setWindowTitle(self.tr("Language Not in ROM"))
-                lang_ask.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+                lang_ask.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
                 lang_ask.setText(self.tr("The language you have chosen is not present in your current ROM.\n\nWhich language would you like to use in ripped text?"))
                 lang_ask.setIcon(QtWidgets.QMessageBox.Question)
 
@@ -255,7 +255,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_credits(self):
         credit = QtWidgets.QMessageBox()
         credit.setWindowTitle("Credits")
-        credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
         credit.setText(f'''{self.tr("Randoglobin Credits")}:<br><br>
             <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {self.tr("Python Code")} / {self.tr("UI Design")}<br>
             <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {self.tr("Additional Code and Patches")} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
@@ -357,7 +357,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_tabs.setUsesScrollButtons(False)
         #self.main_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
 
-        self.main_tabs.addTab(main, QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')), self.tr("Randomizer"))
+        self.main_tabs.addTab(main, QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')), self.tr("Randomizer"))
 
         self.treasure_settings = TreasureTab(self.icon_overlay_FObj_offsets, self.icon_overlay_FObjPc_offsets, self.icon_overlay_FObj, self.fobj_icon_file, self.fobjpc_icon_file, self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file)
         tex = create_MObj_sprite(self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file, 0x9, 0x16, 0)
@@ -367,11 +367,11 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.main_tabs.addTab(QtWidgets.QWidget(), tex, self.tr("Specials"))
 
         self.palette_settings = PaletteTab(self.icon_overlay_BObj_offsets, self.icon_overlay_BObj, self.bobj_icon_file, self.icon_overlay_FObj_offsets, self.icon_overlay_FObj, self.fobj_icon_file, self.textbox_pal, self.textbox_graph, self.font_file, self.latin_font_file, self.battle_help_text)
-        tex = QtGui.QPixmap(str(FILES_DIR / 'pal.png'))
+        tex = QtGui.QPixmap(str(FILES_DIR / 'img_pal.png'))
         self.main_tabs.addTab(self.palette_settings, tex, self.tr("Palette"))
 
         self.music_settings = MusicTab()
-        tex = QtGui.QPixmap(str(FILES_DIR / 'mus.png'))
+        tex = QtGui.QPixmap(str(FILES_DIR / 'img_mus.png'))
         self.main_tabs.addTab(self.music_settings, tex, self.tr("Music"))
 
         self.setCentralWidget(self.main_tabs)
@@ -640,11 +640,11 @@ class MainWindow(QtWidgets.QMainWindow):
         random.seed(seed + str(len(self.globin_list)))
         if random.randint(0, probability) == 0:
             match random.randint(0, 2):
-                case 0: globin_icon = QtGui.QIcon(str(FILES_DIR / 'spritoglobin.ico'))
-                case 1: globin_icon = QtGui.QIcon(str(FILES_DIR / 'cheatoglobin.ico'))
-                case 2: globin_icon = QtGui.QIcon(str(FILES_DIR / 'dataglobin.ico'))
+                case 0: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_spritoglobin.ico'))
+                case 1: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_cheatoglobin.ico'))
+                case 2: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_dataglobin.ico'))
         else:
-            globin_icon = QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico'))
+            globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico'))
         globin.setPixmap(globin_icon.pixmap(16, 16))
         log_entry_layout.addWidget(globin, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
 
@@ -734,7 +734,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def throw_error_window(self, error_mes, seed, critical):
         err = QtWidgets.QMessageBox()
         err.setWindowTitle("Error!")
-        err.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        err.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
         err.setText(f"{error_mes}<br><br>Seed: {seed}")
         if critical:
             err.setIcon(QtWidgets.QMessageBox.Icon.Critical)
@@ -1107,7 +1107,7 @@ class RandoWorker(QtCore.QObject):
                 pass
 
             banner = BytesIO(self.rom.iconBanner)
-            with open(str(FILES_DIR / 'icon.dat'), 'rb') as icon_file:
+            with open(str(FILES_DIR / 'dat_icon.dat'), 'rb') as icon_file:
                 banner.seek(0x20)
                 banner.write(icon_file.read())
             for i in range(0x240, 0x840, 0x100):
