@@ -8,7 +8,7 @@ class SetupPopUp(QtWidgets.QDialog):
         super().__init__()
 
         self.setWindowTitle("Randoglobin Setup")
-        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
 
         self.parent = parent
         self.language_box_save = LANGUAGES.index(["English (NA)",  "NA-EN", 1])

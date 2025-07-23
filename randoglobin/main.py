@@ -3,6 +3,7 @@ import sys
 import random
 import struct
 import hashlib
+import traceback
 import configparser
 from io import BytesIO
 from copy import deepcopy
@@ -43,17 +44,23 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
 
         self.setWindowTitle(APP_DISPLAY_NAME)
-        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        self.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
 
         self.globin_anim_timer = QtCore.QTimer()
         self.globin_anim_timer.setInterval(1000 / 30)
         self.globin_anim_timer.timeout.connect(self.animate_globin)
 
         self.rando_start_sfx = QtMultimedia.QSoundEffect(self)
-        self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "randoglobin_wait.wav"))
+        self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_wait.wav"))
         self.rando_start_sfx.setLoopCount(999)
         self.rando_end_sfx = QtMultimedia.QSoundEffect(self)
-        self.rando_end_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "randoglobin_success.wav"))
+        self.rando_end_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_success.wav"))
+        self.rando_fail_sfx = QtMultimedia.QSoundEffect(self)
+        self.rando_fail_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_fail.wav"))
+
+        self.rando_start_sfx.setVolume(0.3)
+        self.rando_end_sfx.setVolume(0.3)
+        self.rando_fail_sfx.setVolume(0.3)
 
         self.parent = parent
 
@@ -177,8 +184,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def toggle_mute(self, state):
         self.muted = str(state)
 
-        self.rando_start_sfx.setVolume(0.3 * int(not state))
-        self.rando_end_sfx.setVolume(0.3 * int(not state))
+        self.rando_start_sfx.setMuted(state)
+        self.rando_end_sfx.setMuted(state)
+        self.rando_fail_sfx.setMuted(state)
 
         config = configparser.ConfigParser()
         config.read(CONFIG_DIR / "config.ini")
@@ -237,7 +245,7 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 lang_ask = QtWidgets.QMessageBox()
                 lang_ask.setWindowTitle(self.tr("Language Not in ROM"))
-                lang_ask.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+                lang_ask.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
                 lang_ask.setText(self.tr("The language you have chosen is not present in your current ROM.\n\nWhich language would you like to use in ripped text?"))
                 lang_ask.setIcon(QtWidgets.QMessageBox.Question)
 
@@ -251,7 +259,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_credits(self):
         credit = QtWidgets.QMessageBox()
         credit.setWindowTitle("Credits")
-        credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
         credit.setText(f'''{self.tr("Randoglobin Credits")}:<br><br>
             <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {self.tr("Python Code")} / {self.tr("UI Design")}<br>
             <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {self.tr("Additional Code and Patches")} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
@@ -353,7 +361,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_tabs.setUsesScrollButtons(False)
         #self.main_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
 
-        self.main_tabs.addTab(main, QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')), self.tr("Randomizer"))
+        self.main_tabs.addTab(main, QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')), self.tr("Randomizer"))
 
         self.treasure_settings = TreasureTab(self.icon_overlay_FObj_offsets, self.icon_overlay_FObjPc_offsets, self.icon_overlay_FObj, self.fobj_icon_file, self.fobjpc_icon_file, self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file)
         tex = create_MObj_sprite(self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file, 0x9, 0x16, 0)
@@ -363,11 +371,11 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.main_tabs.addTab(QtWidgets.QWidget(), tex, self.tr("Specials"))
 
         self.palette_settings = PaletteTab(self.icon_overlay_BObj_offsets, self.icon_overlay_BObj, self.bobj_icon_file, self.icon_overlay_FObj_offsets, self.icon_overlay_FObj, self.fobj_icon_file, self.textbox_pal, self.textbox_graph, self.font_file, self.latin_font_file, self.battle_help_text)
-        tex = QtGui.QPixmap(str(FILES_DIR / 'pal.png'))
+        tex = QtGui.QPixmap(str(FILES_DIR / 'img_pal.png'))
         self.main_tabs.addTab(self.palette_settings, tex, self.tr("Palette"))
 
         self.music_settings = MusicTab()
-        tex = QtGui.QPixmap(str(FILES_DIR / 'mus.png'))
+        tex = QtGui.QPixmap(str(FILES_DIR / 'img_mus.png'))
         self.main_tabs.addTab(self.music_settings, tex, self.tr("Music"))
 
         self.setCentralWidget(self.main_tabs)
@@ -636,11 +644,11 @@ class MainWindow(QtWidgets.QMainWindow):
         random.seed(seed + str(len(self.globin_list)))
         if random.randint(0, probability) == 0:
             match random.randint(0, 2):
-                case 0: globin_icon = QtGui.QIcon(str(FILES_DIR / 'spritoglobin.ico'))
-                case 1: globin_icon = QtGui.QIcon(str(FILES_DIR / 'cheatoglobin.ico'))
-                case 2: globin_icon = QtGui.QIcon(str(FILES_DIR / 'dataglobin.ico'))
+                case 0: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_spritoglobin.ico'))
+                case 1: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_cheatoglobin.ico'))
+                case 2: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_dataglobin.ico'))
         else:
-            globin_icon = QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico'))
+            globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico'))
         globin.setPixmap(globin_icon.pixmap(16, 16))
         log_entry_layout.addWidget(globin, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
 
@@ -700,6 +708,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.thread.started.connect(self.worker.run)
         self.worker.log.connect(self.log_entry)
         self.worker.finished.connect(self.celebrate)
+        self.worker.failed.connect(self.uncelebrate)
         self.worker.error.connect(self.throw_error_window)
         self.thread.start()
         self.the_button.setEnabled(False)
@@ -717,392 +726,418 @@ class MainWindow(QtWidgets.QMainWindow):
             globin[0].setPixmap(globin[1].pixmap(16, 16))
         self.thread.quit()
     
-    def throw_error_window(self, error_mes, seed):
+    def uncelebrate(self):
+        self.rando_start_sfx.stop()
+        self.the_button.setEnabled(True)
+        self.rando_fail_sfx.play()
+        self.globin_anim_timer.stop()
+        for globin in self.globin_list:
+            globin[0].setPixmap(globin[1].pixmap(16, 16))
+        self.thread.quit()
+    
+    def throw_error_window(self, error_mes, seed, critical):
         err = QtWidgets.QMessageBox()
         err.setWindowTitle("Error!")
-        err.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'randoglobin.ico')))
+        err.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
         err.setText(f"{error_mes}<br><br>Seed: {seed}")
-        err.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        if critical:
+            err.setIcon(QtWidgets.QMessageBox.Icon.Critical)
+        else:
+            err.setIcon(QtWidgets.QMessageBox.Icon.Warning)
         err.setTextFormat(QtCore.Qt.RichText)
         err.exec()
 
 class RandoWorker(QtCore.QObject):
     log = QtCore.Signal(str, str)
     finished = QtCore.Signal()
-    error = QtCore.Signal(str, str)
+    failed = QtCore.Signal()
+    error = QtCore.Signal(str, str, bool)
 
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
     def run(self):
-        translator = QtCore.QTranslator()
-        if translator.load(str(LANG_DIR / f'{self.parent.lang[1]}.qm')):
-            self.parent.parent.installTranslator(translator)
+        try:
+            translator = QtCore.QTranslator()
+            if translator.load(str(LANG_DIR / f'{self.parent.lang[1]}.qm')):
+                self.parent.parent.installTranslator(translator)
 
-        write_spoiler_file = self.parent.write_spoiler.isChecked()
-        if self.parent.use_custom_seed.isChecked():
-            seed = self.parent.custom_seed.text()
-        else:
-            seed = str(random.randint(0, 0xFFFFFFFF))
+            write_spoiler_file = self.parent.write_spoiler.isChecked()
+            if self.parent.use_custom_seed.isChecked():
+                seed = self.parent.custom_seed.text()
+            else:
+                seed = str(random.randint(0, 0xFFFFFFFF))
 
-        rand_special_attacks = self.parent.rand_attacks.isChecked()
-        rand_treasure = self.parent.rand_treasure.isChecked()
-        rand_music = self.parent.rand_music.isChecked()
-        rand_colors = self.parent.rand_colors.isChecked()
+            rand_special_attacks = self.parent.rand_attacks.isChecked()
+            rand_treasure = self.parent.rand_treasure.isChecked()
+            rand_music = self.parent.rand_music.isChecked()
+            rand_colors = self.parent.rand_colors.isChecked()
 
-        intro_skip = self.parent.intro.currentIndex()
-        no_enemies = self.parent.no_enemies.isChecked()
-        exp_mult = self.parent.exp_mult.value()
-        test_target_level = self.parent.starting_level.value()
+            intro_skip = self.parent.intro.currentIndex()
+            no_enemies = self.parent.no_enemies.isChecked()
+            exp_mult = round(self.parent.exp_mult.value(), 1)
+            test_target_level = self.parent.starting_level.value()
 
-        chaos_badges = self.parent.chaos_badges.isChecked()
+            chaos_badges = self.parent.chaos_badges.isChecked()
 
-        unlinear = True # TO DO: add this to options
-        
-        # -----------------------------------------------------------------------------------------------------
-        # import rom
+            unlinear = True # TO DO: add this to options
 
-        self.parent.globin_list = []
-        self.log.emit(seed, "Loading ROM")
-        self.rom = ndspy.rom.NintendoDSRom.fromFile(self.parent.path)
+            # -----------------------------------------------------------------------------------------------------
+            # import rom
 
-        self.log.emit(seed, "Applying ARM Patches")
-        rom_return = apply_arm_patches(self.rom)
-        match rom_return[0]:
-            case 0:
-                self.rom = rom_return[1]
-            case 1:
-                self.throw_error('Armips is not installed!<br>Install the armips executable from <a href="https://github.com/MnL-Modding/armips/releases">https://github.com/MnL-Modding/armips/releases</a> and place it in Randoglobin\'s "files" directory.<br><br>This may have happened due to your antivirus removing armips from the program!<br>(ROM will be exported without patches)', seed)
-            case 2:
-                self.throw_error(f"Error with armips!<br><br>== STDOUT ==<br>{rom_return[1]}<br><br>== STDERR ==<br>{rom_return[2]}<br><br>REPORT THIS TO THEPURPLEANON<br>(ROM will be exported without patches)", seed)
+            self.parent.globin_list = []
+            self.log.emit(seed, "Loading ROM")
+            self.rom = ndspy.rom.NintendoDSRom.fromFile(self.parent.path)
 
-        self.log.emit(seed, "Extracting ROM Files")
-        arm9_data = ndspy.codeCompression.decompress(self.rom.arm9)
-        mfset_MenuMes = self.rom.getFileByName('MData/mfset_MenuMes.dat')
-        mfset_AItmN = self.rom.getFileByName('BData/mfset_AItmN.dat')
-        mfset_BadgeN = self.rom.getFileByName('BData/mfset_BadgeN.dat')
-        mfset_EMesPlace = self.rom.getFileByName('EDataSave/mfset_EMesPlace.dat')
-        treasure = self.rom.getFileByName('Treasure/TreasureInfo.dat')
-        shops = self.rom.getFileByName('MData/MDataShopBuyList.dat')
-        bobjpc_file = self.rom.getFileByName('BObjPc/BObjPc.dat')
-        bobjmon_file = self.rom.getFileByName('BObjMon/BObjMon.dat')
-        bobjui_file = self.rom.getFileByName('BObjUI/BObjUI.dat')
-        eobjsave_file = self.rom.getFileByName('EObjSave/EObjSave.dat')
-        fobj_file = self.rom.getFileByName('FObj/FObj.dat')
-        fobjpc_file = self.rom.getFileByName('FObjPc/FObjPc.dat')
-        fobjmon_file = self.rom.getFileByName('FObjMon/FObjMon.dat')
-        mobj_file = self.rom.getFileByName('MObj/MObj.dat')
-        fmap_file = self.rom.getFileByName('FMap/FMapData.dat')
+            needs_shop_patch = rand_treasure and self.parent.treasure_settings.rando_shop.isChecked()
 
-        self.parent.menu_text = []
-        menu_text = LanguageTable.from_bytes(mfset_MenuMes, False)
-        if menu_text.text_tables[self.parent.lang[2] + 1]:
-            for string in menu_text.text_tables[self.parent.lang[2] + 1].entries:
-                index = string.index(0xFF)
-                self.parent.menu_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+            needs_arm_patch = needs_shop_patch # or [other conditional here]
+            if needs_arm_patch:
+                self.log.emit(seed, "Applying ARM Patches")
+                rom_return = apply_arm_patches(self.rom, {
+                    "shop_patch": needs_shop_patch
+                })
+                match rom_return[0]:
+                    case 0:
+                        self.rom = rom_return[1]
+                    case 1:
+                        self.throw_error('Armips is not installed!<br>Install the armips executable from <a href="https://github.com/MnL-Modding/armips/releases">https://github.com/MnL-Modding/armips/releases</a> and place it in Randoglobin\'s "files" directory.<br><br>This may have happened due to your antivirus removing armips from the program!<br>(ROM will be exported without patches)', seed)
+                    case 2:
+                        self.throw_error(f"Error with armips!<br><br>== STDOUT ==<br>{rom_return[1]}<br><br>== STDERR ==<br>{rom_return[2]}<br><br>REPORT THIS TO THEPURPLEANON<br>(ROM will be exported without patches)", seed)
 
-        self.parent.attack_item_text = []
-        attack_item_text = LanguageTable.from_bytes(mfset_AItmN, False)
-        if attack_item_text.text_tables[self.parent.lang[2] + 1]:
-            for string in attack_item_text.text_tables[self.parent.lang[2] + 1].entries:
-                index = string.index(0xFF)
-                self.parent.attack_item_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+            self.log.emit(seed, "Extracting ROM Files")
+            arm9_data = ndspy.codeCompression.decompress(self.rom.arm9)
+            mfset_MenuMes = self.rom.getFileByName('MData/mfset_MenuMes.dat')
+            mfset_AItmN = self.rom.getFileByName('BData/mfset_AItmN.dat')
+            mfset_BadgeN = self.rom.getFileByName('BData/mfset_BadgeN.dat')
+            mfset_EMesPlace = self.rom.getFileByName('EDataSave/mfset_EMesPlace.dat')
+            treasure = self.rom.getFileByName('Treasure/TreasureInfo.dat')
+            shops = self.rom.getFileByName('MData/MDataShopBuyList.dat')
+            bobjpc_file = self.rom.getFileByName('BObjPc/BObjPc.dat')
+            bobjmon_file = self.rom.getFileByName('BObjMon/BObjMon.dat')
+            bobjui_file = self.rom.getFileByName('BObjUI/BObjUI.dat')
+            eobjsave_file = self.rom.getFileByName('EObjSave/EObjSave.dat')
+            fobj_file = self.rom.getFileByName('FObj/FObj.dat')
+            fobjpc_file = self.rom.getFileByName('FObjPc/FObjPc.dat')
+            fobjmon_file = self.rom.getFileByName('FObjMon/FObjMon.dat')
+            mobj_file = self.rom.getFileByName('MObj/MObj.dat')
+            fmap_file = self.rom.getFileByName('FMap/FMapData.dat')
 
-        self.parent.badge_name_text = []
-        badge_name_text = LanguageTable.from_bytes(mfset_BadgeN, False)
-        if badge_name_text.text_tables[self.parent.lang[2] + 1]:
-            for string in badge_name_text.text_tables[self.parent.lang[2] + 1].entries:
-                index = string.index(0xFF)
-                self.parent.badge_name_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+            self.parent.menu_text = []
+            menu_text = LanguageTable.from_bytes(mfset_MenuMes, False)
+            if menu_text.text_tables[self.parent.lang[2] + 1]:
+                for string in menu_text.text_tables[self.parent.lang[2] + 1].entries:
+                    index = string.index(0xFF)
+                    self.parent.menu_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
-        self.parent.place_text = []
-        place_text = LanguageTable.from_bytes(mfset_EMesPlace, True)
-        if place_text.text_tables[self.parent.lang[2] + 0x43]:
-            for string in place_text.text_tables[self.parent.lang[2] + 0x43].entries:
-                index = string.index(0xFF)
-                self.parent.place_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
-        
-        self.parent.fevent_manager = FEventScriptManager(None)
-        self.parent.battle_manager = BattleScriptManager(None)
+            self.parent.attack_item_text = []
+            attack_item_text = LanguageTable.from_bytes(mfset_AItmN, False)
+            if attack_item_text.text_tables[self.parent.lang[2] + 1]:
+                for string in attack_item_text.text_tables[self.parent.lang[2] + 1].entries:
+                    index = string.index(0xFF)
+                    self.parent.attack_item_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
-        if self.rom.idCode[3] == NA_REGION_CODE or self.rom.idCode[3] == EU_REGION_CODE:                                           # US-base
-            self.parent.overlays = self.rom.loadArm9Overlays()
-            self.parent.overlay_field_data = self.parent.overlays[3]
-            self.parent.overlay_treasure_data = self.parent.overlays[4]
-            self.parent.overlay_fevent_data = self.parent.overlays[6]
-            self.parent.overlay_monster_data = self.parent.overlays[11]
-            self.parent.overlay_bai_data_file = self.parent.overlays[12]
-            self.parent.overlay_bobj_data_group = self.parent.overlays[13]
-            self.parent.overlay_bobj_data_file = self.parent.overlays[14]
-            self.parent.overlay_menu_data = self.parent.overlays[123]
-            self.parent.overlay_shop_data = self.parent.overlays[124]
-            self.parent.overlay_eobj_data_group = self.parent.overlays[127]
-            self.parent.overlay_eobj_data_file = self.parent.overlays[128]
-            self.parent.overlay_map_icon_data_file = self.parent.overlays[129]
-            self.parent.overlay_MObj = self.parent.overlays[132]
+            self.parent.badge_name_text = []
+            badge_name_text = LanguageTable.from_bytes(mfset_BadgeN, False)
+            if badge_name_text.text_tables[self.parent.lang[2] + 1]:
+                for string in badge_name_text.text_tables[self.parent.lang[2] + 1].entries:
+                    index = string.index(0xFF)
+                    self.parent.badge_name_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
-            self.log.emit(seed, "Parsing FEvent")
-            self.parent.fevent_manager.load_overlay3(BytesIO(self.parent.overlay_field_data.data))
-            self.parent.fevent_manager.load_overlay6(BytesIO(self.parent.overlay_fevent_data.data))
-            FEvent = self.rom.getFileByName('FEvent/FEvent.dat')
-            self.parent.fevent_manager.load_fevent(BytesIO(FEvent))
+            self.parent.place_text = []
+            place_text = LanguageTable.from_bytes(mfset_EMesPlace, True)
+            if place_text.text_tables[self.parent.lang[2] + 0x43]:
+                for string in place_text.text_tables[self.parent.lang[2] + 0x43].entries:
+                    index = string.index(0xFF)
+                    self.parent.place_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
-            self.log.emit(seed, "Parsing BAI")
-            self.parent.battle_manager.load_overlay12(BytesIO(self.parent.overlay_bai_data_file.data))
-            self.parent.battle_manager.load_overlay14(BytesIO(self.parent.overlay_bobj_data_file.data))
-            bai_scn_yo = self.rom.getFileByName('BAI/BAI_scn_yo.dat')
-            bai_scn_ji = self.rom.getFileByName('BAI/BAI_scn_ji.dat')
-            self.parent.battle_manager.load_battle_scripts_file(0x1000, BytesIO(bai_scn_yo))
-            self.parent.battle_manager.load_battle_scripts_file(0x3000, BytesIO(bai_scn_ji))
+            self.parent.fevent_manager = FEventScriptManager(None)
+            self.parent.battle_manager = BattleScriptManager(None)
 
-            self.parent.overlay_BObjPc_offsets = (0x8C1C, 0x6290) # filedata, palette groups
-            self.parent.overlay_BObjMon_offsets = (0x9C18, 0x6610) # filedata, palette groups
-            self.parent.overlay_BObjUI_offsets = (0x91C0, 0x645C) # filedata, palette groups
-            self.parent.overlay_EObjSave_offsets = (0x56A4, 0x32A4) # filedata, palette groups
-            self.parent.overlay_FObj_offsets = (0xE8A0, 0x150C8) # filedata, palette groups
-            self.parent.overlay_FObjPc_offsets = (0xBDB0, 0x148D4) # filedata, palette groups
-            self.parent.overlay_FObjMon_offsets = (0xBA3C, 0x14CCC) # filedata, palette groups
-            self.parent.overlay_MObj_offsets = (0x20EC, 0x2C80) # filedata, palette groups
-            self.parent.overlay_FMap_offsets = (0x11310, 0x19FD0) # filedata, map chunks
+            if self.rom.idCode[3] == NA_REGION_CODE or self.rom.idCode[3] == EU_REGION_CODE:                                           # US-base
+                self.parent.overlays = self.rom.loadArm9Overlays()
+                self.parent.overlay_field_data = self.parent.overlays[3]
+                self.parent.overlay_treasure_data = self.parent.overlays[4]
+                self.parent.overlay_fevent_data = self.parent.overlays[6]
+                self.parent.overlay_monster_data = self.parent.overlays[11]
+                self.parent.overlay_bai_data_file = self.parent.overlays[12]
+                self.parent.overlay_bobj_data_group = self.parent.overlays[13]
+                self.parent.overlay_bobj_data_file = self.parent.overlays[14]
+                self.parent.overlay_menu_data = self.parent.overlays[123]
+                self.parent.overlay_shop_data = self.parent.overlays[124]
+                self.parent.overlay_eobj_data_group = self.parent.overlays[127]
+                self.parent.overlay_eobj_data_file = self.parent.overlays[128]
+                self.parent.overlay_map_icon_data_file = self.parent.overlays[129]
+                self.parent.overlay_MObj = self.parent.overlays[132]
 
-            self.rom_base = 1
-        elif self.rom.idCode[3] == JP_REGION_CODE or self.rom.idCode[3] == TW_REGION_CODE or self.rom.idCode[3] == KR_REGION_CODE: # JP-base
+                self.log.emit(seed, "Parsing FEvent")
+                self.parent.fevent_manager.load_overlay3(BytesIO(self.parent.overlay_field_data.data))
+                self.parent.fevent_manager.load_overlay6(BytesIO(self.parent.overlay_fevent_data.data))
+                FEvent = self.rom.getFileByName('FEvent/FEvent.dat')
+                self.parent.fevent_manager.load_fevent(BytesIO(FEvent))
 
-            self.rom_base = 0
+                self.log.emit(seed, "Parsing BAI")
+                self.parent.battle_manager.load_overlay12(BytesIO(self.parent.overlay_bai_data_file.data))
+                self.parent.battle_manager.load_overlay14(BytesIO(self.parent.overlay_bobj_data_file.data))
+                bai_scn_yo = self.rom.getFileByName('BAI/BAI_scn_yo.dat')
+                bai_scn_ji = self.rom.getFileByName('BAI/BAI_scn_ji.dat')
+                self.parent.battle_manager.load_battle_scripts_file(0x1000, BytesIO(bai_scn_yo))
+                self.parent.battle_manager.load_battle_scripts_file(0x3000, BytesIO(bai_scn_ji))
 
-        # -----------------------------------------------------------------------------------------------------
-        # modify rom
+                self.parent.overlay_BObjPc_offsets = (0x8C1C, 0x6290) # filedata, palette groups
+                self.parent.overlay_BObjMon_offsets = (0x9C18, 0x6610) # filedata, palette groups
+                self.parent.overlay_BObjUI_offsets = (0x91C0, 0x645C) # filedata, palette groups
+                self.parent.overlay_EObjSave_offsets = (0x56A4, 0x32A4) # filedata, palette groups
+                self.parent.overlay_FObj_offsets = (0xE8A0, 0x150C8) # filedata, palette groups
+                self.parent.overlay_FObjPc_offsets = (0xBDB0, 0x148D4) # filedata, palette groups
+                self.parent.overlay_FObjMon_offsets = (0xBA3C, 0x14CCC) # filedata, palette groups
+                self.parent.overlay_MObj_offsets = (0x20EC, 0x2C80) # filedata, palette groups
+                self.parent.overlay_FMap_offsets = (0x11310, 0x19FD0) # filedata, map chunks
 
-        # randomization ---------------------------------
-        spoiler_file = self.tr("Seed") + f": {seed}"
+                self.rom_base = 1
+            elif self.rom.idCode[3] == JP_REGION_CODE or self.rom.idCode[3] == TW_REGION_CODE or self.rom.idCode[3] == KR_REGION_CODE: # JP-base
 
-        if unlinear:
-            #self.log.emit(seed, "Destroying Linearity")
-            self.log.emit(seed, "Skipping Tutorials") # temporary more honest log entry
-            self.parent.fevent_manager = open_worldify(self.parent.fevent_manager)
-        
-        if rand_treasure:
-            self.log.emit(seed, "Randomizing Treasure")
+                self.rom_base = 0
 
-            treasure_strings = [
-                [
-                    self.tr("Broque Monsieur's Item Shop"),
-                    self.tr("Broggy's Gear Shop"),
-                    self.tr("Badge Shop"),
-                    self.tr("Toad Town Gear Shop"),
-                    self.tr("Toadles Boutique"),
-                    self.tr("Toad Town Star Shop"),
-                    self.tr("Toad Town/Toad Square Item Shop"),
-                    self.tr("Toad Square Gear Shop"),
-                ], [
-                    self.tr("Available after 1 shop upgrade"),
-                    self.tr("Available after 2 shop upgrades"),
-                    self.tr("Available after 3 shop upgrades"),
-                    self.tr("Available after 4 shop upgrades"),
-                    self.tr("Available after 5 shop upgrades"),
-                    self.tr("Available after 6 shop upgrades"),
-                    self.tr("Available after 7 shop upgrades"),
-                ],
-                self.tr("Room"),
-                self.tr("Important Items"),
-            ]
+            # -----------------------------------------------------------------------------------------------------
+            # modify rom
 
-            treasure, shops, self.parent.overlay_shop_data.data, arm9_data, spoiler_file = randomize_treasure(
-                self,
-                seed,
-                self.parent.treasure_settings,
-                treasure,
-                shops,
-                BytesIO(arm9_data),
-                [0, 0x000145C0][self.rom_base],
-                [0, 0x0004E6F8][self.rom_base],
-                [0, 0x000098A0][self.rom_base],
-                self.parent.overlay_FMap_offsets[1],
-                [0, 0x0004AA30][self.rom_base],
-                [0, 0x0000864C][self.rom_base],
-                [self.parent.overlay_shop_data.data, self.parent.overlay_field_data.data, self.parent.overlay_treasure_data.data, self.parent.overlay_map_icon_data_file.data],
-                treasure_strings,
-                self.parent.place_text,
-                self.parent.badge_name_text,
-                spoiler_file,
-            )
+            # randomization ---------------------------------
+            spoiler_file = self.tr("Seed") + f": {seed}"
 
-        if rand_special_attacks:
-            self.log.emit(seed, "Randomizing Special Attacks")
+            if unlinear:
+                #self.log.emit(seed, "Destroying Linearity")
+                self.log.emit(seed, "Skipping Tutorials") # temporary more honest log entry
+                self.parent.fevent_manager = open_worldify(self.parent.fevent_manager)
 
-            bros_attack_string = self.tr("Bros Attacks")
-            brawl_attack_string = self.tr("Brawl Attacks")
+            if rand_treasure:
+                self.log.emit(seed, "Randomizing Treasure")
 
-            self.parent.overlay_menu_data.data, self.parent.fevent_manager, spoiler_file = randomize_special_attacks(
-                seed,
-                bros_attack_string,
-                self.parent.fevent_manager,
-                self.parent.overlay_menu_data.data,
-                [0, 0x000304D4][self.rom_base],
-                [0, 0x0004EA68][self.rom_base],
-                arm9_data,
-                spoiler_file,
-                [self.parent.menu_text, self.parent.attack_item_text],
-                self,
-            )
-        
-        if rand_music:
-            self.log.emit(seed, "Modifying Music")
-            self.parent.overlay_field_data.data, self.parent.fevent_manager, self.parent.battle_manager = randomize_music(
-                seed,
-                self.parent.music_settings,
-                self.parent.overlay_field_data.data,
-                [0, 0x000098A0][self.rom_base],
-                self.parent.fevent_manager,
-                self.parent.battle_manager,
-            )
-        
-        if rand_colors:
-            self.log.emit(seed, "Modifying Palette")
-            arm9_data, bobjpc_file, bobjmon_file, bobjui_file, eobjsave_file, fobj_file, fobjpc_file, fobjmon_file, mobj_file, fmap_file, spoiler_file, self.parent.overlay_field_data.data = randomize_colors(
-                self,
-                seed,
-                self.parent.palette_settings,
-                arm9_data,
-                [0, 0x0004C144][self.rom_base],
-                [bobjpc_file, bobjmon_file, bobjui_file],
-                [self.parent.overlay_bobj_data_file.data, self.parent.overlay_bobj_data_group.data],
-                [self.parent.overlay_BObjPc_offsets, self.parent.overlay_BObjMon_offsets, self.parent.overlay_BObjUI_offsets],
-                eobjsave_file,
-                [self.parent.overlay_eobj_data_file.data, self.parent.overlay_eobj_data_group.data],
-                self.parent.overlay_EObjSave_offsets,
-                [fobj_file, fobjpc_file, fobjmon_file],
-                [self.parent.overlay_field_data.data, self.parent.overlay_treasure_data.data],
-                [self.parent.overlay_FObj_offsets, self.parent.overlay_FObjPc_offsets, self.parent.overlay_FObjMon_offsets],
-                mobj_file,
-                self.parent.overlay_MObj.data,
-                self.parent.overlay_MObj_offsets,
-                fmap_file,
-                self.parent.overlay_FMap_offsets,
-                spoiler_file,
-                self.tr("Palette"),
-                [self.parent.battle_help_text[0x13], self.parent.battle_help_text[0x14], self.parent.battle_help_text[0x15]],
-                treasure,
-            )
-        
-        if write_spoiler_file:
-            self.log.emit(seed, "Writing Spoiler File")
-            with open(os.path.splitext(self.parent.new_path)[0] + "_spoiler.txt", "w") as spoiler_file_w:
-                spoiler_file_w.write(spoiler_file)
-
-        # patching --------------------------------------
-        if intro_skip > 0:
-            self.log.emit(seed, "Patching Intro")
-            self.parent.fevent_manager = skip_intro(self.parent.fevent_manager, intro_skip == 2)
-
-        if no_enemies:
-            self.log.emit(seed, "Removing Enemies")
-            self.parent.fevent_manager = remove_enemies(self.parent.fevent_manager)
-
-        if exp_mult != 1:
-            self.log.emit(seed, "Multiplying EXP")
-            self.parent.overlay_monster_data.data = multiply_exp(
-                self.parent.overlay_monster_data.data,
-                [0, 0x0000E074][self.rom_base],
-                exp_mult,
-            )
-        
-        if test_target_level > 1:
-            self.log.emit(seed, "Changing Player Level")
-            self.parent.fevent_manager = change_start_level(
-                self.parent.fevent_manager,
-                test_target_level,
-                arm9_data,
-                [
-                    [0, 0x0004F1B8][self.rom_base],
-                    [0, 0x0004ED08][self.rom_base],
-                    [0, 0x0004F668][self.rom_base],
+                treasure_strings = [
+                    [
+                        self.tr("Broque Monsieur's Item Shop"),
+                        self.tr("Broggy's Gear Shop"),
+                        self.tr("Badge Shop"),
+                        self.tr("Toad Town Gear Shop"),
+                        self.tr("Toadles Boutique"),
+                        self.tr("Toad Town Star Shop"),
+                        self.tr("Toad Town/Toad Square Item Shop"),
+                        self.tr("Toad Square Gear Shop"),
+                    ], [
+                        self.tr("Available after 1 shop upgrade"),
+                        self.tr("Available after 2 shop upgrades"),
+                        self.tr("Available after 3 shop upgrades"),
+                        self.tr("Available after 4 shop upgrades"),
+                        self.tr("Available after 5 shop upgrades"),
+                        self.tr("Available after 6 shop upgrades"),
+                        self.tr("Available after 7 shop upgrades"),
+                    ],
+                    self.tr("Room"),
+                    self.tr("Important Items"),
                 ]
-            )
-        
-        if chaos_badges:
-            self.log.emit(seed, "Randomizing Badge Combo Effects")
-            arm9 = BytesIO(arm9_data)
-            arm9.seek([0, 0x0004E778][self.rom_base])
-            badge_list = [arm9.read(8) for i in range(16)]
-            random.seed(seed)
-            random.shuffle(badge_list)
-            arm9.seek([0, 0x0004E778][self.rom_base])
-            badge_list = [arm9.write(entry) for entry in badge_list]
-            arm9.seek(0)
-            arm9_data = arm9.read()
 
-        # -----------------------------------------------------------------------------------------------------
-        # export rom
+                treasure, shops, self.parent.overlay_shop_data.data, arm9_data, spoiler_file = randomize_treasure(
+                    self,
+                    seed,
+                    self.parent.treasure_settings,
+                    treasure,
+                    shops,
+                    BytesIO(arm9_data),
+                    [0, 0x000145C0][self.rom_base],
+                    [0, 0x0004E6F8][self.rom_base],
+                    [0, 0x000098A0][self.rom_base],
+                    self.parent.overlay_FMap_offsets[1],
+                    [0, 0x0004AA30][self.rom_base],
+                    [0, 0x0000864C][self.rom_base],
+                    [self.parent.overlay_shop_data.data, self.parent.overlay_field_data.data, self.parent.overlay_treasure_data.data, self.parent.overlay_map_icon_data_file.data],
+                    treasure_strings,
+                    self.parent.place_text,
+                    self.parent.badge_name_text,
+                    spoiler_file,
+                )
 
-        self.log.emit(seed, "Rebuilding FEvent")
-        FEvent = BytesIO()
-        self.parent.fevent_manager.save_fevent(FEvent)
-        FEvent.seek(0)
-        self.rom.setFileByName('FEvent/FEvent.dat', FEvent.read())
-        
-        self.log.emit(seed, "Rebuilding BAI")
-        bai_scn_yo = BytesIO()
-        bai_scn_ji = BytesIO()
-        self.parent.battle_manager.save_battle_scripts_file(0x1000, bai_scn_yo)
-        self.parent.battle_manager.save_battle_scripts_file(0x3000, bai_scn_ji)
-        bai_scn_yo.seek(0)
-        bai_scn_ji.seek(0)
-        self.rom.setFileByName('BAI/BAI_scn_yo.dat', bai_scn_yo.read())
-        self.rom.setFileByName('BAI/BAI_scn_ji.dat', bai_scn_ji.read())
+            if rand_special_attacks:
+                self.log.emit(seed, "Randomizing Special Attacks")
 
-        self.log.emit(seed, "Packing ROM")
-        overlay_3 = BytesIO(self.parent.overlay_field_data.data)
-        self.parent.fevent_manager.save_overlay3(overlay_3)
-        overlay_3.seek(0)
-        self.parent.overlay_field_data.data = overlay_3.read()
+                bros_attack_string = self.tr("Bros Attacks")
+                brawl_attack_string = self.tr("Brawl Attacks")
 
-        self.rom.setFileByName('Treasure/TreasureInfo.dat', treasure)
-        self.rom.setFileByName('MData/MDataShopBuyList.dat', shops)
+                self.parent.overlay_menu_data.data, self.parent.fevent_manager, spoiler_file = randomize_special_attacks(
+                    seed,
+                    bros_attack_string,
+                    self.parent.fevent_manager,
+                    self.parent.overlay_menu_data.data,
+                    [0, 0x000304D4][self.rom_base],
+                    [0, 0x0004EA68][self.rom_base],
+                    arm9_data,
+                    spoiler_file,
+                    [self.parent.menu_text, self.parent.attack_item_text],
+                    self,
+                )
 
-        self.rom.setFileByName('BObjPc/BObjPc.dat', bobjpc_file)
-        self.rom.setFileByName('BObjMon/BObjMon.dat', bobjmon_file)
-        self.rom.setFileByName('BObjUI/BObjUI.dat', bobjui_file)
-        self.rom.setFileByName('EObjSave/EObjSave.dat', eobjsave_file)
-        self.rom.setFileByName('FObj/FObj.dat', fobj_file)
-        self.rom.setFileByName('FObjPc/FObjPc.dat', fobjpc_file)
-        self.rom.setFileByName('FObjMon/FObjMon.dat', fobjmon_file)
-        self.rom.setFileByName('MObj/MObj.dat', mobj_file)
-        self.rom.setFileByName('FMap/FMapData.dat', fmap_file)
+            if rand_music:
+                self.log.emit(seed, "Modifying Music")
+                self.parent.overlay_field_data.data, self.parent.fevent_manager, self.parent.battle_manager = randomize_music(
+                    seed,
+                    self.parent.music_settings,
+                    self.parent.overlay_field_data.data,
+                    [0, 0x000098A0][self.rom_base],
+                    self.parent.fevent_manager,
+                    self.parent.battle_manager,
+                )
 
-        if self.rom_base == 1:
-            self.rom.files[self.parent.overlays[3].fileID] = self.parent.overlay_field_data.save(compress = True)
-            self.rom.files[self.parent.overlays[6].fileID] = self.parent.overlay_fevent_data.save(compress = True)
-            self.rom.files[self.parent.overlays[11].fileID] = self.parent.overlay_monster_data.save(compress = True)
-            self.rom.files[self.parent.overlays[123].fileID] = self.parent.overlay_menu_data.save(compress = True)
-            self.rom.files[self.parent.overlays[124].fileID] = self.parent.overlay_shop_data.save(compress = True)
-        else:
-            pass
-            
-        banner = BytesIO(self.rom.iconBanner)
-        with open(str(FILES_DIR / 'icon.dat'), 'rb') as icon_file:
-            banner.seek(0x20)
-            banner.write(icon_file.read())
-        for i in range(0x240, 0x840, 0x100):
-            banner.seek(i)
-            banner.write("Bowser's Inside Story\n(Randomized)\nNintendo / Randoglobin".encode('utf-16'))
+            if rand_colors:
+                self.log.emit(seed, "Modifying Palette")
+                arm9_data, bobjpc_file, bobjmon_file, bobjui_file, eobjsave_file, fobj_file, fobjpc_file, fobjmon_file, mobj_file, fmap_file, spoiler_file, self.parent.overlay_field_data.data = randomize_colors(
+                    self,
+                    seed,
+                    self.parent.palette_settings,
+                    arm9_data,
+                    [0, 0x0004C144][self.rom_base],
+                    [bobjpc_file, bobjmon_file, bobjui_file],
+                    [self.parent.overlay_bobj_data_file.data, self.parent.overlay_bobj_data_group.data],
+                    [self.parent.overlay_BObjPc_offsets, self.parent.overlay_BObjMon_offsets, self.parent.overlay_BObjUI_offsets],
+                    eobjsave_file,
+                    [self.parent.overlay_eobj_data_file.data, self.parent.overlay_eobj_data_group.data],
+                    self.parent.overlay_EObjSave_offsets,
+                    [fobj_file, fobjpc_file, fobjmon_file],
+                    [self.parent.overlay_field_data.data, self.parent.overlay_treasure_data.data],
+                    [self.parent.overlay_FObj_offsets, self.parent.overlay_FObjPc_offsets, self.parent.overlay_FObjMon_offsets],
+                    mobj_file,
+                    self.parent.overlay_MObj.data,
+                    self.parent.overlay_MObj_offsets,
+                    fmap_file,
+                    self.parent.overlay_FMap_offsets,
+                    spoiler_file,
+                    self.tr("Palette"),
+                    [self.parent.battle_help_text[0x13], self.parent.battle_help_text[0x14], self.parent.battle_help_text[0x15]],
+                    treasure,
+                )
 
-        banner.seek(0)
-        self.rom.iconBanner = banner.read()
+            if write_spoiler_file:
+                self.log.emit(seed, "Writing Spoiler File")
+                with open(os.path.splitext(self.parent.new_path)[0] + "_spoiler.txt", "w") as spoiler_file_w:
+                    spoiler_file_w.write(spoiler_file)
 
-        if self.rom_base == 1:
-            self.rom.arm9 = ndspy.code.MainCodeFile(arm9_data, self.rom.arm9RamAddress, self.rom.arm9CodeSettingsPointerAddress).save(compress = True)
-        else:
-            pass
-        self.rom.arm9OverlayTable = ndspy.code.saveOverlayTable(self.parent.overlays)
+            # patching --------------------------------------
+            if intro_skip > 0:
+                self.log.emit(seed, "Patching Intro")
+                self.parent.fevent_manager = skip_intro(self.parent.fevent_manager, intro_skip == 2)
 
-        if random.randrange(0, 10) == 4:
-            self.log.emit(seed, "Reticulating splines")
-        self.rom.saveToFile(self.parent.new_path)
+            if no_enemies:
+                self.log.emit(seed, "Removing Enemies")
+                self.parent.fevent_manager = remove_enemies(self.parent.fevent_manager)
 
-        self.log.emit(seed, "Complete!")
-        self.finished.emit()
+            if exp_mult != 1.0:
+                self.log.emit(seed, "Multiplying EXP")
+                self.parent.overlay_monster_data.data = multiply_exp(
+                    self.parent.overlay_monster_data.data,
+                    [0, 0x0000E074][self.rom_base],
+                    exp_mult,
+                )
+
+            if test_target_level > 1:
+                self.log.emit(seed, "Changing Player Level")
+                self.parent.fevent_manager = change_start_level(
+                    self.parent.fevent_manager,
+                    test_target_level,
+                    arm9_data,
+                    [
+                        [0, 0x0004F1B8][self.rom_base],
+                        [0, 0x0004ED08][self.rom_base],
+                        [0, 0x0004F668][self.rom_base],
+                    ]
+                )
+
+            if chaos_badges:
+                self.log.emit(seed, "Randomizing Badge Combo Effects")
+                arm9 = BytesIO(arm9_data)
+                arm9.seek([0, 0x0004E778][self.rom_base])
+                badge_list = [arm9.read(8) for i in range(16)]
+                random.seed(seed)
+                random.shuffle(badge_list)
+                arm9.seek([0, 0x0004E778][self.rom_base])
+                badge_list = [arm9.write(entry) for entry in badge_list]
+                arm9.seek(0)
+                arm9_data = arm9.read()
+
+            # -----------------------------------------------------------------------------------------------------
+            # export rom
+
+            self.log.emit(seed, "Rebuilding FEvent")
+            FEvent = BytesIO()
+            self.parent.fevent_manager.save_fevent(FEvent)
+            FEvent.seek(0)
+            self.rom.setFileByName('FEvent/FEvent.dat', FEvent.read())
+
+            self.log.emit(seed, "Rebuilding BAI")
+            bai_scn_yo = BytesIO()
+            bai_scn_ji = BytesIO()
+            self.parent.battle_manager.save_battle_scripts_file(0x1000, bai_scn_yo)
+            self.parent.battle_manager.save_battle_scripts_file(0x3000, bai_scn_ji)
+            bai_scn_yo.seek(0)
+            bai_scn_ji.seek(0)
+            self.rom.setFileByName('BAI/BAI_scn_yo.dat', bai_scn_yo.read())
+            self.rom.setFileByName('BAI/BAI_scn_ji.dat', bai_scn_ji.read())
+
+            self.log.emit(seed, "Packing ROM")
+            overlay_3 = BytesIO(self.parent.overlay_field_data.data)
+            self.parent.fevent_manager.save_overlay3(overlay_3)
+            overlay_3.seek(0)
+            self.parent.overlay_field_data.data = overlay_3.read()
+
+            self.rom.setFileByName('Treasure/TreasureInfo.dat', treasure)
+            self.rom.setFileByName('MData/MDataShopBuyList.dat', shops)
+
+            self.rom.setFileByName('BObjPc/BObjPc.dat', bobjpc_file)
+            self.rom.setFileByName('BObjMon/BObjMon.dat', bobjmon_file)
+            self.rom.setFileByName('BObjUI/BObjUI.dat', bobjui_file)
+            self.rom.setFileByName('EObjSave/EObjSave.dat', eobjsave_file)
+            self.rom.setFileByName('FObj/FObj.dat', fobj_file)
+            self.rom.setFileByName('FObjPc/FObjPc.dat', fobjpc_file)
+            self.rom.setFileByName('FObjMon/FObjMon.dat', fobjmon_file)
+            self.rom.setFileByName('MObj/MObj.dat', mobj_file)
+            self.rom.setFileByName('FMap/FMapData.dat', fmap_file)
+
+            if self.rom_base == 1:
+                self.rom.files[self.parent.overlays[3].fileID] = self.parent.overlay_field_data.save(compress = True)
+                self.rom.files[self.parent.overlays[6].fileID] = self.parent.overlay_fevent_data.save(compress = True)
+                self.rom.files[self.parent.overlays[11].fileID] = self.parent.overlay_monster_data.save(compress = True)
+                self.rom.files[self.parent.overlays[123].fileID] = self.parent.overlay_menu_data.save(compress = True)
+                self.rom.files[self.parent.overlays[124].fileID] = self.parent.overlay_shop_data.save(compress = True)
+            else:
+                pass
+
+            banner = BytesIO(self.rom.iconBanner)
+            with open(str(FILES_DIR / 'dat_icon.dat'), 'rb') as icon_file:
+                banner.seek(0x20)
+                banner.write(icon_file.read())
+            for i in range(0x240, 0x840, 0x100):
+                banner.seek(i)
+                banner.write("Bowser's Inside Story\n(Randomized)\nNintendo / Randoglobin".encode('utf-16'))
+
+            banner.seek(0)
+            self.rom.iconBanner = banner.read()
+
+            if self.rom_base == 1:
+                self.rom.arm9 = ndspy.code.MainCodeFile(arm9_data, self.rom.arm9RamAddress, self.rom.arm9CodeSettingsPointerAddress).save(compress = True)
+            else:
+                pass
+            self.rom.arm9OverlayTable = ndspy.code.saveOverlayTable(self.parent.overlays)
+
+            if random.randrange(0, 10) == 4:
+                self.log.emit(seed, "Reticulating splines")
+            self.rom.saveToFile(self.parent.new_path)
+
+            self.log.emit(seed, "Complete!")
+            self.finished.emit()
+        except Exception as e:
+            string = traceback.format_exc().replace("\n", "<br>")
+
+            self.throw_error(f'An exception has occurred!<br><br>Traceback:<pre>{string}</pre>', seed)
+            self.log.emit(seed, "Failed...")
+            self.failed.emit()
     
-    def throw_error(self, error_mes, seed):
-        self.error.emit(error_mes, seed)
+    def throw_error(self, error_mes, seed, critical = True):
+        self.error.emit(error_mes, seed, critical)

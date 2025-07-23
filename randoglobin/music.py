@@ -188,7 +188,7 @@ class MusicTab(QtWidgets.QWidget):
 
         self.affect_final_boss = QtWidgets.QCheckBox(self.tr("Randomize Final Boss Music"))
         main_layout.addWidget(self.affect_final_boss, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.affect_final_boss.setIcon(QtGui.QIcon(str(FILES_DIR / 'mus_dk.png')))
+        self.affect_final_boss.setIcon(QtGui.QIcon(str(FILES_DIR / 'img_mus_dk.png')))
 
         # ------------------------------------------
         line = QtWidgets.QFrame()
@@ -222,9 +222,9 @@ class MusicTab(QtWidgets.QWidget):
         self.music_list_boxes = [None, None, None]
         for i in range(3):
             string = QtWidgets.QLabel([
-                self.tr("Overworld Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'mus_g.png')}' align='top'></html>",
-                self.tr("Cutscene Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'mus_y.png')}' align='top'></html>",
-                self.tr("Battle Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'mus_r.png')}' align='top'></html>"][i])
+                self.tr("Overworld Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'img_mus_g.png')}' align='top'></html>",
+                self.tr("Cutscene Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'img_mus_y.png')}' align='top'></html>",
+                self.tr("Battle Music Whitelist") + f" <html><img src='{str(FILES_DIR / 'img_mus_r.png')}' align='top'></html>"][i])
             music_lists_layout.addWidget(string, 1, i, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
             self.music_list_boxes[i] = QtWidgets.QListWidget()
@@ -236,7 +236,7 @@ class MusicTab(QtWidgets.QWidget):
 
 
         for entry in self.DOUBLE_TRACKS_NAMES:
-            self.music_list_boxes[0].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_g.png')), entry))
+            self.music_list_boxes[0].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_g.png')), entry))
         self.overworld_list_meta = VALID_DOUBLE_TRACKS
 
         for i in range(self.music_list_boxes[0].count()):
@@ -246,10 +246,10 @@ class MusicTab(QtWidgets.QWidget):
 
 
         for entry in self.SINGLE_TRACKS_NAMES:
-            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_y.png')), entry))
+            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_y.png')), entry))
         for entry in self.DOUBLE_TRACKS_NAMES:
-            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_g.png')), entry + " - " + self.TRACK_QUALIFIERS[0]))
-            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_g_inv.png')), entry + " - " + self.TRACK_QUALIFIERS[1]))
+            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_g.png')), entry + " - " + self.TRACK_QUALIFIERS[0]))
+            self.music_list_boxes[1].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_g_inv.png')), entry + " - " + self.TRACK_QUALIFIERS[1]))
         double_track_meta = [[track, track + 1] for track in VALID_DOUBLE_TRACKS]
         self.cutscene_list_meta = VALID_SINGLE_TRACKS + [item for sublist in [[track, track + 1] for track in VALID_DOUBLE_TRACKS] for item in sublist] # fugly but works
 
@@ -261,14 +261,14 @@ class MusicTab(QtWidgets.QWidget):
 
         for i, entry in enumerate(self.BATTLE_TRACKS_NAMES):
             if i > 0:
-                self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_r.png')), entry))
+                self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_r.png')), entry))
             else:
-                self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_dk.png')), entry))
+                self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_dk.png')), entry))
         for entry in self.SINGLE_TRACKS_NAMES:
-            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_y.png')), entry))
+            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_y.png')), entry))
         for entry in self.DOUBLE_TRACKS_NAMES:
-            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_g.png')), entry + " - " + self.TRACK_QUALIFIERS[0]))
-            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'mus_g_inv.png')), entry + " - " + self.TRACK_QUALIFIERS[1]))
+            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_g.png')), entry + " - " + self.TRACK_QUALIFIERS[0]))
+            self.music_list_boxes[2].addItem(QtWidgets.QListWidgetItem(QtGui.QIcon(str(FILES_DIR / 'img_mus_g_inv.png')), entry + " - " + self.TRACK_QUALIFIERS[1]))
         double_track_meta = [[track, track + 1] for track in VALID_DOUBLE_TRACKS]
         self.battle_list_meta = VALID_BATTLE_TRACKS + VALID_SINGLE_TRACKS + [item for sublist in [[track, track + 1] for track in VALID_DOUBLE_TRACKS] for item in sublist] # fugly but works
         

@@ -130,10 +130,9 @@ def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, 
 
 
 def set_item_prices(arm9, item_tables_offset, item_list):
-    for item in item_list:
-        _item, price = item
-        item_type = _item >> 12
-        item_id = _item & 0xFFF
+    for item, price in item_list:
+        item_type = item >> 12
+        item_id = item & 0xFFF
         arm9.seek(item_tables_offset + ((item_type - 1) * 4))
         arm9.seek(int.from_bytes(arm9.read(4), 'little') - 0x2004000)
         match item_type:
