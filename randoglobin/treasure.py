@@ -97,6 +97,11 @@ def randomize_treasure(parent, seed, settings, treasure_file, shops_file, arm9, 
     # ----------------------------------
     for i in range(len(treasure_list_initial)):
         treasure_list_random[i].treasure_type = treasure_list_initial[i].treasure_type
+        treasure_list_random[i].unk_bit = treasure_list_initial[i].unk_bit
+        if treasure_list_initial[i].treasure_type == 0:
+            treasure_list_random[i].max_hits = treasure_list_initial[i].max_hits
+        else:
+            treasure_list_random[i].max_hits = 0
     # ----------------------------------
     if randomize_treasure_spots:
         return_list[0], treasure_list_random, badge_dict = assemble_all_treasure(
