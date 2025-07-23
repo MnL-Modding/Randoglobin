@@ -58,6 +58,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.rando_fail_sfx = QtMultimedia.QSoundEffect(self)
         self.rando_fail_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_fail.wav"))
 
+        self.rando_start_sfx.setVolume(0.3)
+        self.rando_end_sfx.setVolume(0.3)
+        self.rando_fail_sfx.setVolume(0.3)
+
         self.parent = parent
 
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -180,9 +184,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def toggle_mute(self, state):
         self.muted = str(state)
 
-        self.rando_start_sfx.setVolume(0.3 * int(not state))
-        self.rando_end_sfx.setVolume(0.3 * int(not state))
-        self.rando_fail_sfx.setVolume(0.3 * int(not state))
+        self.rando_start_sfx.setMuted(state)
+        self.rando_end_sfx.setMuted(state)
+        self.rando_fail_sfx.setMuted(state)
 
         config = configparser.ConfigParser()
         config.read(CONFIG_DIR / "config.ini")
@@ -785,7 +789,6 @@ class RandoWorker(QtCore.QObject):
             self.parent.globin_list = []
             self.log.emit(seed, "Loading ROM")
             self.rom = ndspy.rom.NintendoDSRom.fromFile(self.parent.path)
-            y=y
 
             needs_shop_patch = rand_treasure and self.parent.treasure_settings.rando_shop.isChecked()
 
