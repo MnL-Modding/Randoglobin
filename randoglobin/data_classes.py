@@ -13,7 +13,7 @@ class Treasure:
         self.item = data
         self.is_last_entry_in_room = 0
         self.treasure_type = 0
-        self.max_hits = 0
+        self.max_hits = 1
         self.quantity = 0
     
     def to_treasure_info(self):

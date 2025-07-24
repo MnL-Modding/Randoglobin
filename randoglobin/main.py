@@ -165,11 +165,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 hasher.update(chunk)
         
         rom_is_modded = True
-        match hasher.hexdigest():
-            case "9126963d6c6b6f81a9a666ba766e223781ff286634486e2a56d07a4c82eef4f1":
+        match hasher.hexdigest(): # pre-DSi ROM sha256 hash | post-DSi ROM sha256 hash
+            case "9126963d6c6b6f81a9a666ba766e223781ff286634486e2a56d07a4c82eef4f1" | "951a73ebd6d57d132c9aaf9abab27fc69ef3669a6636d5ab2670877646f84fd3":
                 if self.rom.idCode[3] == NA_REGION_CODE:
                     rom_is_modded = False
-            case "e7417640d1b0c65cb01924a4a38bd1fc6b330ead88710152f13677a896147f39":
+            case "e7417640d1b0c65cb01924a4a38bd1fc6b330ead88710152f13677a896147f39" | "4d8a3ffa13ad525db85e596d576675860a816aa77560ca87c4505451c172c60b":
                 if self.rom.idCode[3] == EU_REGION_CODE:
                     rom_is_modded = False
             # other region checksums will need to be calculated when support for those is added
@@ -257,15 +257,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_ui()
     
     def show_credits(self):
+        translator = QtCore.QTranslator()
+        if translator.load(str(LANG_DIR / f'{self.lang[1]}.qm')):
+            self.parent.installTranslator(translator)
+
+        credit_trans = [
+            self.tr("Randoglobin Credits"),
+            self.tr("Python Code"),
+            self.tr("UI Design"),
+            self.tr("Additional Code and Patches"),
+            self.tr("Randoglobin Icon"),
+            self.tr("Additional Graphics"),
+            self.tr("Translators"),
+        ]
+
         credit = QtWidgets.QMessageBox()
-        credit.setWindowTitle("Credits")
+        credit.setWindowTitle(self.tr("Credits"))
         credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
-        credit.setText(f'''{self.tr("Randoglobin Credits")}:<br><br>
-            <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {self.tr("Python Code")} / {self.tr("UI Design")}<br>
-            <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {self.tr("Additional Code and Patches")} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
-            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {self.tr("Randoglobin Icon")} / {self.tr("Additional Graphics")}
+        credit.setText(f'''{credit_trans[0]}:<br><br>
+            <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {credit_trans[1]} / {credit_trans[2]}<br>
+            <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {credit_trans[3]} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
+            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {credit_trans[4]} / {credit_trans[5]}
             <br><br>
-            {self.tr("Translators")}:<br>
+            {credit_trans[6]}:<br>
             - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag" style="vertical-align: middle;"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a>
         ''')
         credit.setTextFormat(QtCore.Qt.RichText)
