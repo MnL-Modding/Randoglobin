@@ -56,6 +56,11 @@ skip_intro_1a = Subroutine([
     CodeCommand(0x0008, [0x0001], Variable(0x2004)), # disable bowser's fire
     CodeCommand(0x0008, [0x0001], Variable(0x2030)), # ??? this variable is 1 at this point in the story (i think) so yeah sure why not
     CodeCommand(0x0041, [0x00000016], Variable(0x1000)), # give the player the 22 coins they missed in peach's castle
+    CodeCommand(0x0008, [0x0001], Variable(0xEA6D)), # dimble wood intro: first room
+    CodeCommand(0x0008, [0x0001], Variable(0xEA6E)), # dimble wood intro: boulder room
+    CodeCommand(0x0008, [0x0001], Variable(0xEA6F)), # dimble wood intro: forest room
+    CodeCommand(0x0008, [0x0001], Variable(0xEA7B)), # dimble wood intro: fawful tease
+    CodeCommand(0x0008, [0x0001], Variable(0xEAA6)), # dimble wood intro: fawful encounter
     CodeCommand(0x01AE),
     CodeCommand(0x011E, [0x0296, 0x0000, 0x0000, 0x0000, 0x00, 0x00, 0x0001, -0x00000003, 0x00]),
     CodeCommand(0x0001),

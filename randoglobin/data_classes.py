@@ -5,17 +5,19 @@ from math import ceil
 class Treasure:
     def from_treasure_info(self, data):
         bitfield, self.item = struct.unpack('<HH', data)
-        self.treasure_type = bitfield & 0b111111
-        self.max_hits = (bitfield >> 6) & 0b1111
+        self.is_last_entry_in_room = bitfield & 0b1
+        self.treasure_type = (bitfield >> 1) & 0b1111
+        self.max_hits = (bitfield >> 5) & 0b11111
         self.quantity = (bitfield >> 10) & 0b11111
     def from_item_id(self, data):
         self.item = data
+        self.is_last_entry_in_room = 0
         self.treasure_type = 0
         self.max_hits = 0
         self.quantity = 0
     
     def to_treasure_info(self):
-        bitfield = self.treasure_type + (self.quantity << 10)
+        bitfield = self.is_last_entry_in_room + (self.treasure_type << 1) + (self.max_hits << 5) + (self.quantity << 10)
         return struct.pack('<HH', bitfield, self.item)
     def to_item_id(self):
         return self.item
