@@ -1,6 +1,6 @@
 [project]
 name = "randoglobin"
-version = "0.1.0"
+version = "0.1.1"
 description = "Randomizer for Bowser's Inside Story"
 authors = [
     {name = "ThePurpleAnon"}
