@@ -72,6 +72,11 @@ skip_intro_1b = Subroutine([
 ])
 
 def remove_enemies(fevent_manager):
+    for command in fevent_manager.fevent_chunks[0x0030][0].subroutines[4].commands:
+        if isinstance(command, CodeCommand) and command.command_id == 0x0063:
+            if command.arguments[0] >= len(fevent_manager.fevent_chunks[0x0030][0].header.actors):
+                command.arguments[0] = 0 # this fixes one very specific issue in one very specific scenario but it's whatever lol
+
     for i in range(len(fevent_manager.fevent_chunks)):
         chunk_triple = fevent_manager.fevent_chunks[i]
         fevent_manager.fevent_chunks[i] = (chunk_triple[0], None, chunk_triple[2])
