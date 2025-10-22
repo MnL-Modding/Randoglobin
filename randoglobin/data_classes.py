@@ -2,8 +2,12 @@ import struct
 from io import BytesIO
 from math import ceil
 
+import importlib
 import mnlscript.bis.text
 mnlscript.bis.text.TT = None
+
+import mnlscript.bis
+importlib.reload(mnlscript.bis)
 
 from mnlscript.bis import add_coins, add_items
 
