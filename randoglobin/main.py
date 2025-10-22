@@ -1,3 +1,7 @@
+# Workaround for dynamic scope in Nuitka
+if '__compiled__' in globals():
+    _dynamicscope_test_variable = False
+
 import os
 import sys
 import random
@@ -12,16 +16,19 @@ from functools import partial
 import ndspy.rom
 import ndspy.codeCompression
 from PySide6 import QtCore, QtGui, QtMultimedia, QtWidgets
+from mnllib import CodeCommand
 from mnllib.bis import FEventScriptManager, BattleScriptManager, LanguageTable, TextTable, BIS_ENCODING
 
 from randoglobin.constants import *
-from randoglobin.patch import skip_intro, remove_enemies, multiply_exp, change_start_level, open_worldify
+from randoglobin.patch import ExtrasTab, skip_intro, remove_enemies, multiply_exp, change_start_level, open_worldify, challenge_medal_mode
 from randoglobin.treasure import TreasureTab, randomize_treasure
 from randoglobin.palette import PaletteTab, randomize_colors
 from randoglobin.music import MusicTab, randomize_music
-from randoglobin.image import create_MObj_sprite, create_textbox
+from randoglobin.image import create_MObj_sprite, create_textbox, generate_staff_roll
 from randoglobin.popups import SetupPopUp
+from randoglobin.sound_test import SoundTest
 from randoglobin.arm import apply_arm_patches
+from randoglobin.mnlscript_misc import arm_center_endless
 
 
 def main():
@@ -49,6 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.globin_anim_timer = QtCore.QTimer()
         self.globin_anim_timer.setInterval(1000 / 30)
         self.globin_anim_timer.timeout.connect(self.animate_globin)
+        self.sound_test = None
 
         self.rando_start_sfx = QtMultimedia.QSoundEffect(self)
         self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_wait.wav"))
@@ -265,9 +273,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Randoglobin Credits"),
             self.tr("Python Code"),
             self.tr("UI Design"),
+            self.tr("Program Music and Sounds"),
             self.tr("Additional Code and Patches"),
             self.tr("Randoglobin Icon"),
             self.tr("Additional Graphics"),
+            self.tr("Palette Randomization Colors"),
+            self.tr("Key Item Shop Sprites"),
             self.tr("Translators"),
         ]
 
@@ -275,15 +286,42 @@ class MainWindow(QtWidgets.QMainWindow):
         credit.setWindowTitle(self.tr("Credits"))
         credit.setWindowIcon(QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')))
         credit.setText(f'''{credit_trans[0]}:<br><br>
-            <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a><br>- {credit_trans[1]} / {credit_trans[2]}<br>
-            <a href="https://github.com/DimiDimit">DimiDimit</a><br>- {credit_trans[3]} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a><br>
-            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a><br>- {credit_trans[4]} / {credit_trans[5]}
-            <br><br>
-            {credit_trans[6]}:<br>
-            - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag" style="vertical-align: middle;"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a>
+            <a href="https://bsky.app/profile/thepurpleanon.bsky.social">ThePurpleAnon</a> <img src="{str(FILES_DIR / 'img_soc_bsky.png')}" alt="Bluesky" style="vertical-align: middle;"> <br>- {credit_trans[1]} / {credit_trans[2]} / {credit_trans[3]}<br>
+            <a href="https://github.com/DimiDimit">DimiDimit</a> <img src="{str(FILES_DIR / 'img_soc_github.png')}" alt="Github" style="vertical-align: middle;"> <br>- {credit_trans[4]} / <a href="https://github.com/MnL-Modding/mnllib.py"><code>mnllib.py</code></a> & <a href="https://github.com/MnL-Modding/mnllib.rs"><code>.rs</code></a> / <a href="https://github.com/MnL-Modding/mnlscript.py"><code>mnlscript.py</code></a><br>
+            <a href="https://bsky.app/profile/miikheaven.bsky.social">MiiK</a> <img src="{str(FILES_DIR / 'img_soc_bsky.png')}" alt="Bluesky" style="vertical-align: middle;"> <br>- {credit_trans[5]} / {credit_trans[6]} / {credit_trans[7]}<br>
+            <a href="https://bsky.app/profile/kattnip.supermariogalaxy2.com">kattnip</a> <img src="{str(FILES_DIR / 'img_soc_bsky.png')}" alt="Bluesky" style="vertical-align: middle;"> <br>- {credit_trans[8]}<br>
+            <br>
+            {credit_trans[9]}:<br>
+            - Español <img src="{str(LANG_DIR / 'NA-ES.png')}" alt="NA-ES Flag" style="vertical-align: middle;"> - <a href="https://bsky.app/profile/angelthem.bsky.social">AngelThe_M</a> <img src="{str(FILES_DIR / 'img_soc_bsky.png')}" alt="Bluesky" style="vertical-align: middle;"> <br>
+            - Français (EU) <img src="{str(LANG_DIR / 'EU-FR.png')}" alt="EU_FR Flag" style="vertical-align: middle;"> - Wirare <img src="{str(FILES_DIR / 'img_soc_discord.png')}" alt="Discord" style="vertical-align: middle;">
         ''')
         credit.setTextFormat(QtCore.Qt.RichText)
         credit.exec()
+    
+    def run_sound_test(self):
+        if self.sound_test != None:
+            self.sound_test.hide()
+            self.sound_test.deleteLater()
+
+        self.sound_test = SoundTest()
+        self.sound_test.closed.connect(self.close_sound_test)
+        self.sound_test.show()
+        
+        self.rando_start_sfx.setVolume(0.0)
+        self.rando_end_sfx.setVolume(0.0)
+        self.rando_fail_sfx.setVolume(0.0)
+    
+    def close_sound_test(self):
+        self.sound_test.stop_sound()
+        
+        self.sound_test.hide()
+        self.sound_test.deleteLater()
+
+        self.sound_test = None
+
+        self.rando_start_sfx.setVolume(0.3)
+        self.rando_end_sfx.setVolume(0.3)
+        self.rando_fail_sfx.setVolume(0.3)
     
     def init_ui(self):
         translator = QtCore.QTranslator()
@@ -311,6 +349,8 @@ class MainWindow(QtWidgets.QMainWindow):
         language_selector = QtWidgets.QMenu(self.tr("&Language"), self)
         for i, lang in enumerate(LANGUAGES):
             lang_string = lang[0]
+            if len(lang) > 3:
+                lang_string += "⚠"
             if self.lang[1] == lang[1]:
                 lang_string += " ✓"
             language_selector.addAction(
@@ -324,6 +364,10 @@ class MainWindow(QtWidgets.QMainWindow):
         audio_mute.setChecked(self.muted == "True")
         audio_mute.toggled.connect(self.toggle_mute)
         menu_bar_options.addAction(audio_mute)
+        menu_bar_options.addSeparator() # -----------------------------------------
+        sound_test = QtGui.QAction(self.tr("&Sound Test"), self)
+        sound_test.triggered.connect(self.run_sound_test)
+        menu_bar_options.addAction(sound_test)
 
         menu_bar.addAction(
             self.tr("&Credits"),
@@ -377,6 +421,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.main_tabs.addTab(main, QtGui.QIcon(str(FILES_DIR / 'ico_randoglobin.ico')), self.tr("Randomizer"))
 
+        self.extra_settings = ExtrasTab()
+        tex = create_MObj_sprite(self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file, 0x90, 0x10, 0)
+        self.main_tabs.addTab(self.extra_settings, tex, self.tr("Extras"))
+
         self.treasure_settings = TreasureTab(self.icon_overlay_FObj_offsets, self.icon_overlay_FObjPc_offsets, self.icon_overlay_FObj, self.fobj_icon_file, self.fobjpc_icon_file, self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file)
         tex = create_MObj_sprite(self.icon_overlay_MObj_offsets, self.icon_overlay_MObj, self.mobj_icon_file, 0x9, 0x16, 0)
         self.main_tabs.addTab(self.treasure_settings, tex, self.tr("Treasure"))
@@ -393,55 +441,134 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_tabs.addTab(self.music_settings, tex, self.tr("Music"))
 
         self.setCentralWidget(self.main_tabs)
-        # ------------------------------------------
 
-        # main_layout.addWidget(QtWidgets.QLabel("This randomizer is still in active development. Options prefaced with \"!!\"\n  are either incomplete or still have known issues that need to be fixed."), 0, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(QtWidgets.QLabel("- " + self.tr("Quality of Life Settings") + " -"), 0, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.write_spoiler = QtWidgets.QCheckBox(self.tr("Write Spoiler File"))
+        main_layout.addWidget(self.write_spoiler, 1, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        # # ------------------------------------------
-        # line = QtWidgets.QFrame()
-        # line.setFrameShape(QtWidgets.QFrame.HLine)
-        # line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        # main_layout.addWidget(line, 1, 0, 1, 3)
-        # # ------------------------------------------
-
-        settings = QtWidgets.QWidget()
-        settings_layout = QtWidgets.QGridLayout(settings)
-        settings_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(settings, 1, 0, 1, 1)
-
-        self.write_spoiler = QtWidgets.QCheckBox()
-        settings_layout.addWidget(self.write_spoiler, 0, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("Write Spoiler File"))
-        settings_layout.addWidget(string, 0, 0)
-        string.setBuddy(self.write_spoiler)
-
-        self.use_custom_seed = QtWidgets.QCheckBox()
-        self.use_custom_seed.checkStateChanged.connect(self.custom_seed_box_enable)
-        settings_layout.addWidget(self.use_custom_seed, 1, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("Use Specific Seed"))
-        settings_layout.addWidget(string, 1, 0)
-        string.setBuddy(self.use_custom_seed)
-
-        self.custom_seed = QtWidgets.QLineEdit()
-        settings_layout.addWidget(self.custom_seed, 2, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        seed_full = QtWidgets.QWidget()
+        seed_full_layout = QtWidgets.QHBoxLayout(seed_full)
+        seed_full_layout.setContentsMargins(0, 0, 0, 0)
         string = QtWidgets.QLabel(self.tr("Seed"))
-        settings_layout.addWidget(string, 2, 0)
-        string.setBuddy(self.custom_seed)
+        self.custom_seed = QtWidgets.QLineEdit()
+        self.custom_seed.setPlaceholderText(self.tr("Random"))
+        self.custom_seed.editingFinished.connect(self.strip_seed)
+        seed_full_layout.addWidget(string)
+        seed_full_layout.addWidget(self.custom_seed)
+        main_layout.addWidget(seed_full, 0, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # ------------------------------------------
+        line_title = QtWidgets.QWidget()
+        line_title.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        line_layout = QtWidgets.QHBoxLayout(line_title)
+        line_layout.setContentsMargins(0, 11, 0, 11)
+
         line = QtWidgets.QFrame()
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        main_layout.addWidget(line, 2, 0, 1, 3)
+        line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
+        line_layout.addWidget(line)
+
+        line_layout.addWidget(QtWidgets.QLabel(self.tr("Quality of Life Settings")))
+
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
+        line_layout.addWidget(line)
+
+        main_layout.addWidget(line_title, 2, 0, 1, 3)
         # ------------------------------------------
-        main_layout.addWidget(QtWidgets.QLabel("- " + self.tr("Main Randomization Settings") + " -"), 3, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        qol = QtWidgets.QWidget()
+        qol_layout = QtWidgets.QGridLayout(qol)
+        qol_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(qol, 4, 2, 1, 1)
+
+        self.exp_mult = QtWidgets.QDoubleSpinBox()
+        self.exp_mult.setValue(1)
+        self.exp_mult.setDecimals(1)
+        self.exp_mult.setSingleStep(0.1)
+        self.exp_mult.setRange(0.0, 100.0)
+        self.exp_mult.setSuffix("x")
+        qol_layout.addWidget(self.exp_mult, 0, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(self.tr("EXP Multiplier"))
+        qol_layout.addWidget(string, 0, 0)
+        string.setBuddy(self.exp_mult)
+
+        self.no_enemies_kp = QtWidgets.QCheckBox()
+        qol_layout.addWidget(self.no_enemies_kp, 1, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(f'{self.tr("No Enemies")} - {self.tr("Overworld")}')
+        qol_layout.addWidget(string, 1, 0)
+        string.setBuddy(self.no_enemies_kp)
+
+        self.no_enemies_ml = QtWidgets.QCheckBox()
+        qol_layout.addWidget(self.no_enemies_ml, 2, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(f'{self.tr("No Enemies")} - {self.tr("Inside Bowser")}')
+        qol_layout.addWidget(string, 2, 0)
+        string.setBuddy(self.no_enemies_ml)
+
+        # ------------------------------------------
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.VLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        main_layout.addWidget(line, 4, 1, 1, 1)
+        # ------------------------------------------
+
+        qol_left = QtWidgets.QWidget()
+        qol_left_layout = QtWidgets.QGridLayout(qol_left)
+        qol_left_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(qol_left, 4, 0, 1, 1)
+
+        self.intro = QtWidgets.QComboBox()
+        self.intro.addItems([self.tr("Blorbs Intro"), self.tr("Peach's Castle"), self.tr("Trash Pit")])
+        qol_left_layout.addWidget(self.intro, 0, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(self.tr("Game Intro"))
+        qol_left_layout.addWidget(string, 0, 0)
+        string.setBuddy(self.intro)
+
+        self.starting_level_ml = QtWidgets.QSpinBox()
+        self.starting_level_ml.setValue(1)
+        self.starting_level_ml.setRange(1, 99)
+        qol_left_layout.addWidget(self.starting_level_ml, 1, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(f'{self.tr("Initial Player Level")} - {self.battle_help_text[0x13]} && {self.battle_help_text[0x14]}')
+        qol_left_layout.addWidget(string, 1, 0)
+        string.setBuddy(self.starting_level_ml)
+
+        self.starting_level_kp = QtWidgets.QSpinBox()
+        self.starting_level_kp.setValue(1)
+        self.starting_level_kp.setRange(1, 99)
+        qol_left_layout.addWidget(self.starting_level_kp, 2, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
+        string = QtWidgets.QLabel(f'{self.tr("Initial Player Level")} - {self.battle_help_text[0x15]}')
+        qol_left_layout.addWidget(string, 2, 0)
+        string.setBuddy(self.starting_level_kp)
+
+        # ------------------------------------------
+        line_title = QtWidgets.QWidget()
+        line_title.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        line_layout = QtWidgets.QHBoxLayout(line_title)
+        line_layout.setContentsMargins(0, 11, 0, 11)
+
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
+        line_layout.addWidget(line)
+
+        line_layout.addWidget(QtWidgets.QLabel(self.tr("Main Randomization Settings")))
+
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
+        line_layout.addWidget(line)
+
+        main_layout.addWidget(line_title, 5, 0, 1, 3)
         # ------------------------------------------
 
         random = QtWidgets.QWidget()
         random_layout = QtWidgets.QVBoxLayout(random)
         random_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(random, 4, 0, 1, 3)
+        main_layout.addWidget(random, 7, 0, 1, 3)
 
         bg = QtWidgets.QFrame()
         bg_layout = QtWidgets.QHBoxLayout(bg)
@@ -504,89 +631,29 @@ class MainWindow(QtWidgets.QMainWindow):
         random_layout.addWidget(bg)
 
         # ------------------------------------------
-        line = QtWidgets.QFrame()
-        line.setFrameShape(QtWidgets.QFrame.VLine)
-        line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        main_layout.addWidget(line, 1, 1, 1, 1)
-        # ------------------------------------------
+        line_title = QtWidgets.QWidget()
+        line_title.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        line_layout = QtWidgets.QHBoxLayout(line_title)
+        line_layout.setContentsMargins(0, 11, 0, 11)
 
-        qol = QtWidgets.QWidget()
-        qol_layout = QtWidgets.QGridLayout(qol)
-        qol_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(qol, 1, 2, 1, 1)
-
-        self.intro = QtWidgets.QComboBox()
-        self.intro.addItems([self.tr("Blorbs Intro"), self.tr("Peach's Castle"), self.tr("Trash Pit")])
-        qol_layout.addWidget(self.intro, 0, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("Game Intro"))
-        qol_layout.addWidget(string, 0, 0)
-        string.setBuddy(self.intro)
-
-        self.no_enemies = QtWidgets.QCheckBox()
-        qol_layout.addWidget(self.no_enemies, 1, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("No Enemies"))
-        qol_layout.addWidget(string, 1, 0)
-        string.setBuddy(self.no_enemies)
-
-        self.exp_mult = QtWidgets.QDoubleSpinBox()
-        self.exp_mult.setValue(1)
-        self.exp_mult.setDecimals(1)
-        self.exp_mult.setSingleStep(0.1)
-        self.exp_mult.setRange(0.0, 100.0)
-        self.exp_mult.setSuffix("x")
-        qol_layout.addWidget(self.exp_mult, 2, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("EXP Multiplier"))
-        qol_layout.addWidget(string, 2, 0)
-        string.setBuddy(self.exp_mult)
-
-        self.starting_level = QtWidgets.QSpinBox()
-        self.starting_level.setValue(1)
-        self.starting_level.setRange(1, 99)
-        qol_layout.addWidget(self.starting_level, 3, 1, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        string = QtWidgets.QLabel(self.tr("Initial Player Level"))
-        qol_layout.addWidget(string, 3, 0)
-        string.setBuddy(self.starting_level)
-
-        # ------------------------------------------
         line = QtWidgets.QFrame()
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        main_layout.addWidget(line, 5, 0, 1, 3)
-        # ------------------------------------------
-        main_layout.addWidget(QtWidgets.QLabel("- " + self.tr("Chaotic Randomization Settings") + " -"), 6, 0, 1, 3, alignment = QtCore.Qt.AlignmentFlag.AlignCenter)
-        # ------------------------------------------
+        line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        line_layout.addWidget(line)
 
-        chaos = QtWidgets.QWidget()
-        chaos_layout = QtWidgets.QVBoxLayout(chaos)
-        chaos_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(chaos, 7, 0, 1, 3)
-
-        setting = QtWidgets.QWidget()
-        setting_layout = QtWidgets.QHBoxLayout(setting)
-        setting_layout.setContentsMargins(0, 0, 0, 0)
-        self.chaos_badges = QtWidgets.QCheckBox()
-        text = QtWidgets.QLabel(self.tr("Randomize Badge Combo Effects") + "  " + self.tr("(kinda broken)"))
-        text.setBuddy(self.chaos_badges)
-        setting_layout.addWidget(text)
-        setting_layout.addWidget(self.chaos_badges, alignment = QtCore.Qt.AlignmentFlag.AlignRight)
-        chaos_layout.addWidget(setting)
-
-        # ------------------------------------------
-        line = QtWidgets.QFrame()
-        line.setFrameShape(QtWidgets.QFrame.HLine)
-        line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        main_layout.addWidget(line, 8, 0, 1, 3)
+        main_layout.addWidget(line_title, 11, 0, 1, 3)
         # ------------------------------------------
 
         self.the_button = QtWidgets.QPushButton(self.tr("Randomize!"))
         self.the_button.clicked.connect(self.randomize)
-        main_layout.addWidget(self.the_button, 9, 0, 1, 3)
+        main_layout.addWidget(self.the_button, 12, 0, 1, 3)
 
         # ------------------------------------------
         line = QtWidgets.QFrame()
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        main_layout.addWidget(line, 10, 0, 1, 3)
+        main_layout.addWidget(line, 13, 0, 1, 3)
         # ------------------------------------------
 
         self.log_scroll_area = QtWidgets.QScrollArea()
@@ -598,44 +665,36 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log_scroll_area.verticalScrollBar().rangeChanged.connect(self.scroll_widget_to_bottom)
         self.log = QtWidgets.QVBoxLayout(log_widget)
         self.log.setAlignment(QtCore.Qt.AlignTop)
-        main_layout.addWidget(self.log_scroll_area, 11, 0, 1, 3)
+        main_layout.addWidget(self.log_scroll_area, 14, 0, 1, 3)
         
         # ------------------------------------------
         # default settings
         self.write_spoiler.setChecked(True)
-        self.use_custom_seed.setChecked(False)
-        self.custom_seed.setEnabled(False)
-        self.custom_seed.setText(self.tr("Random"))
 
         self.rand_treasure.setChecked(True)
         # self.rand_attacks.setChecked(False)
         self.rand_colors.setChecked(False)
         self.rand_music.setChecked(False)
 
-        self.chaos_badges.setChecked(False)
-
         self.intro.setCurrentIndex(2)
-        self.no_enemies.setChecked(False)
+        self.no_enemies_ml.setChecked(False)
+        self.no_enemies_kp.setChecked(False)
         self.exp_mult.setValue(1.5)
-        self.starting_level.setValue(5)
+        self.starting_level_ml.setValue(5)
+        self.starting_level_kp.setValue(5)
 
         self.log.addWidget(QtWidgets.QLabel("Awaiting Randomization..."))
+
+        if self.sound_test != None:
+            self.run_sound_test()
+    
+    def strip_seed(self):
+        self.custom_seed.setText(self.custom_seed.text().strip())
     
     def tabs_enable(self):
-        self.main_tabs.setTabEnabled(1, self.rand_treasure.isChecked())
-        self.main_tabs.setTabEnabled(2, self.rand_colors.isChecked())
-        self.main_tabs.setTabEnabled(3, self.rand_music.isChecked())
-    
-    def custom_seed_box_enable(self, value):
-        translator = QtCore.QTranslator()
-        if translator.load(str(LANG_DIR / f'{self.lang[1]}.qm')):
-            self.parent.installTranslator(translator)
-
-        self.custom_seed.setEnabled(value == QtCore.Qt.Checked)
-        if value == QtCore.Qt.Checked:
-            self.custom_seed.setText(str(random.randint(0, 0xFFFFFFFF)))
-        else:
-            self.custom_seed.setText(self.tr("Random"))
+        self.main_tabs.setTabEnabled(2, self.rand_treasure.isChecked())
+        self.main_tabs.setTabEnabled(3, self.rand_colors.isChecked())
+        self.main_tabs.setTabEnabled(4, self.rand_music.isChecked())
     
     def log_entry(self, seed, string):
         log_entry = QtWidgets.QWidget()
@@ -726,6 +785,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker.error.connect(self.throw_error_window)
         self.thread.start()
         self.the_button.setEnabled(False)
+        self.rando_start_sfx.setSource("") # if i don't do this the sound doesn't restart properly but idk why, so this is a fine bandaid fix for now i think
+        self.rando_start_sfx.setSource(QtCore.QUrl.fromLocalFile(FILES_DIR / "snd_randoglobin_wait.wav"))
         self.rando_start_sfx.play()
 
         self.globin_anim_offset = 0
@@ -773,15 +834,18 @@ class RandoWorker(QtCore.QObject):
 
     def run(self):
         try:
+            print("randomization start")
             translator = QtCore.QTranslator()
             if translator.load(str(LANG_DIR / f'{self.parent.lang[1]}.qm')):
                 self.parent.parent.installTranslator(translator)
 
             write_spoiler_file = self.parent.write_spoiler.isChecked()
-            if self.parent.use_custom_seed.isChecked():
-                seed = self.parent.custom_seed.text()
-            else:
+            if self.parent.custom_seed.text() == "":
                 seed = str(random.randint(0, 0xFFFFFFFF))
+            else:
+                seed = self.parent.custom_seed.text()
+            
+            print(f"seed = {seed}")
 
             rand_special_attacks = self.parent.rand_attacks.isChecked()
             rand_treasure = self.parent.rand_treasure.isChecked()
@@ -789,13 +853,20 @@ class RandoWorker(QtCore.QObject):
             rand_colors = self.parent.rand_colors.isChecked()
 
             intro_skip = self.parent.intro.currentIndex()
-            no_enemies = self.parent.no_enemies.isChecked()
+            no_enemies_ml = self.parent.no_enemies_ml.isChecked()
+            no_enemies_kp = self.parent.no_enemies_kp.isChecked()
             exp_mult = round(self.parent.exp_mult.value(), 1)
-            test_target_level = self.parent.starting_level.value()
+            start_level_ml = self.parent.starting_level_ml.value()
+            start_level_kp = self.parent.starting_level_kp.value()
 
-            chaos_badges = self.parent.chaos_badges.isChecked()
 
-            unlinear = True # TO DO: add this to options
+            unlinear = self.parent.extra_settings.unlinear.isChecked()
+            no_music = self.parent.extra_settings.no_music.isChecked()
+            endless_arm = self.parent.extra_settings.endless_arm.isChecked()
+            debug_mode = self.parent.extra_settings.debug_mode.isChecked()
+            challenge_medal = self.parent.extra_settings.challenge_medal.isChecked()
+            impossible = self.parent.extra_settings.impossible.isChecked()
+            #chaos_badges = False
 
             # -----------------------------------------------------------------------------------------------------
             # import rom
@@ -804,13 +875,19 @@ class RandoWorker(QtCore.QObject):
             self.log.emit(seed, "Loading ROM")
             self.rom = ndspy.rom.NintendoDSRom.fromFile(self.parent.path)
 
-            needs_shop_patch = rand_treasure and self.parent.treasure_settings.rando_shop.isChecked()
+            needs_shop_patch = rand_treasure and any([
+                self.parent.treasure_settings.rando_ishop.isChecked(),
+                self.parent.treasure_settings.rando_gshop.isChecked(),
+                self.parent.treasure_settings.rando_bshop.isChecked(),
+            ])
 
-            needs_arm_patch = needs_shop_patch # or [other conditional here]
+            needs_arm_patch = any([needs_shop_patch, impossible, no_music]) or True # looks like the anti-anti-piracy is basically required so i'm just always applying it now
             if needs_arm_patch:
                 self.log.emit(seed, "Applying ARM Patches")
                 rom_return = apply_arm_patches(self.rom, {
-                    "shop_patch": needs_shop_patch
+                    "shop_patch": needs_shop_patch,
+                    "impossible": impossible,
+                    "no_music": no_music,
                 })
                 match rom_return[0]:
                     case 0:
@@ -824,7 +901,9 @@ class RandoWorker(QtCore.QObject):
             arm9_data = ndspy.codeCompression.decompress(self.rom.arm9)
             mfset_MenuMes = self.rom.getFileByName('MData/mfset_MenuMes.dat')
             mfset_AItmN = self.rom.getFileByName('BData/mfset_AItmN.dat')
+            mfset_UItmN = self.rom.getFileByName('BData/mfset_UItmN.dat')
             mfset_BadgeN = self.rom.getFileByName('BData/mfset_BadgeN.dat')
+            mfset_WearN = self.rom.getFileByName('BData/mfset_WearN.dat')
             mfset_EMesPlace = self.rom.getFileByName('EDataSave/mfset_EMesPlace.dat')
             treasure = self.rom.getFileByName('Treasure/TreasureInfo.dat')
             shops = self.rom.getFileByName('MData/MDataShopBuyList.dat')
@@ -837,34 +916,95 @@ class RandoWorker(QtCore.QObject):
             fobjmon_file = self.rom.getFileByName('FObjMon/FObjMon.dat')
             mobj_file = self.rom.getFileByName('MObj/MObj.dat')
             fmap_file = self.rom.getFileByName('FMap/FMapData.dat')
+            fdfx_pal_file = self.rom.getFileByName('FRfx/FDfxPal.dat')
 
             self.parent.menu_text = []
             menu_text = LanguageTable.from_bytes(mfset_MenuMes, False)
             if menu_text.text_tables[self.parent.lang[2] + 1]:
                 for string in menu_text.text_tables[self.parent.lang[2] + 1].entries:
-                    index = string.index(0xFF)
+                    index = string.rindex(0xFF)
                     self.parent.menu_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
             self.parent.attack_item_text = []
             attack_item_text = LanguageTable.from_bytes(mfset_AItmN, False)
             if attack_item_text.text_tables[self.parent.lang[2] + 1]:
                 for string in attack_item_text.text_tables[self.parent.lang[2] + 1].entries:
-                    index = string.index(0xFF)
+                    index = string.rindex(0xFF)
                     self.parent.attack_item_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
             self.parent.badge_name_text = []
             badge_name_text = LanguageTable.from_bytes(mfset_BadgeN, False)
             if badge_name_text.text_tables[self.parent.lang[2] + 1]:
                 for string in badge_name_text.text_tables[self.parent.lang[2] + 1].entries:
-                    index = string.index(0xFF)
+                    index = string.rindex(0xFF)
                     self.parent.badge_name_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
 
             self.parent.place_text = []
             place_text = LanguageTable.from_bytes(mfset_EMesPlace, True)
             if place_text.text_tables[self.parent.lang[2] + 0x43]:
                 for string in place_text.text_tables[self.parent.lang[2] + 0x43].entries:
-                    index = string.index(0xFF)
+                    index = string.rindex(0xFF)
                     self.parent.place_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+
+            all_item_names = []
+
+            for i in range(6):
+                all_attack_item_text = []
+                attack_item_text = LanguageTable.from_bytes(mfset_AItmN, False)
+                if attack_item_text.text_tables[i + 1]:
+                    for string in attack_item_text.text_tables[i + 1].entries:
+                        index = string.rindex(0xFF)
+                        all_attack_item_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+                else:
+                    all_item_names.append(None) # i technically don't need more than one of these checks but hey, better safe than sorry ig
+                    continue
+
+                all_consumable_item_text = []
+                consumable_item_text = LanguageTable.from_bytes(mfset_UItmN, False)
+                if consumable_item_text.text_tables[i + 1]:
+                    for string in consumable_item_text.text_tables[i + 1].entries:
+                        index = string.rindex(0xFF)
+                        all_consumable_item_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+                else:
+                    all_item_names.append(None)
+                    continue
+
+                all_badge_name_text = []
+                badge_name_text = LanguageTable.from_bytes(mfset_BadgeN, False)
+                if badge_name_text.text_tables[i + 1]:
+                    for string in badge_name_text.text_tables[i + 1].entries:
+                        index = string.rindex(0xFF)
+                        all_badge_name_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+                else:
+                    all_item_names.append(None)
+                    continue
+
+                all_wear_name_text = []
+                wear_name_text = LanguageTable.from_bytes(mfset_WearN, False)
+                if wear_name_text.text_tables[i + 1]:
+                    for string in wear_name_text.text_tables[i + 1].entries:
+                        index = string.rindex(0xFF)
+                        all_wear_name_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+                else:
+                    all_item_names.append(None)
+                    continue
+                
+                all_item_names.append([
+                    all_attack_item_text,
+                    all_consumable_item_text,
+                    all_badge_name_text,
+                    all_wear_name_text,
+                ])
+            
+            all_menu_text = []
+            for i in range(6):
+                menu_text = []
+                menu_text_table = LanguageTable.from_bytes(mfset_MenuMes, False)
+                if menu_text_table.text_tables[i + 1]:
+                    for string in menu_text_table.text_tables[i + 1].entries:
+                        index = string.rindex(0xFF)
+                        menu_text.append(string[:index].decode(BIS_ENCODING, "ignore"))
+                all_menu_text.append(menu_text)
 
             self.parent.fevent_manager = FEventScriptManager(None)
             self.parent.battle_manager = BattleScriptManager(None)
@@ -885,6 +1025,12 @@ class RandoWorker(QtCore.QObject):
                 self.parent.overlay_map_icon_data_file = self.parent.overlays[129]
                 self.parent.overlay_MObj = self.parent.overlays[132]
 
+                arm9 = BytesIO(arm9_data)
+                arm9.seek(0x43D3C)
+                test0, test1 = struct.unpack('<II', arm9.read(0x8))
+                arm9.seek(-8, 1)
+                self.parent.font_file = arm9.read(test0 + test1)
+
                 self.log.emit(seed, "Parsing FEvent")
                 self.parent.fevent_manager.load_overlay3(BytesIO(self.parent.overlay_field_data.data))
                 self.parent.fevent_manager.load_overlay6(BytesIO(self.parent.overlay_fevent_data.data))
@@ -898,6 +1044,18 @@ class RandoWorker(QtCore.QObject):
                 bai_scn_ji = self.rom.getFileByName('BAI/BAI_scn_ji.dat')
                 self.parent.battle_manager.load_battle_scripts_file(0x1000, BytesIO(bai_scn_yo))
                 self.parent.battle_manager.load_battle_scripts_file(0x3000, BytesIO(bai_scn_ji))
+                bai_mon_yo = self.rom.getFileByName('BAI/BAI_mon_yo.dat')
+                bai_mon_ji = self.rom.getFileByName('BAI/BAI_mon_ji.dat')
+                bai_mon_cf = self.rom.getFileByName('BAI/BAI_mon_cf.dat')
+                self.parent.battle_manager.load_battle_scripts_file(0x2000, BytesIO(bai_mon_yo))
+                self.parent.battle_manager.load_battle_scripts_file(0x4000, BytesIO(bai_mon_ji))
+                self.parent.battle_manager.load_battle_scripts_file(0x7000, BytesIO(bai_mon_cf))
+                bai_atk_nh = self.rom.getFileByName('BAI/BAI_atk_nh.dat')
+                bai_atk_yy = self.rom.getFileByName('BAI/BAI_atk_yy.dat')
+                bai_atk_hk = self.rom.getFileByName('BAI/BAI_atk_hk.dat')
+                self.parent.battle_manager.load_battle_scripts_file(0xA000, BytesIO(bai_atk_nh))
+                self.parent.battle_manager.load_battle_scripts_file(0xC000, BytesIO(bai_atk_yy))
+                self.parent.battle_manager.load_battle_scripts_file(0xD000, BytesIO(bai_atk_hk))
 
                 self.parent.overlay_BObjPc_offsets = (0x8C1C, 0x6290) # filedata, palette groups
                 self.parent.overlay_BObjMon_offsets = (0x9C18, 0x6610) # filedata, palette groups
@@ -920,13 +1078,36 @@ class RandoWorker(QtCore.QObject):
             # randomization ---------------------------------
             spoiler_file = self.tr("Seed") + f": {seed}"
 
+            # for testing purposes only
+            # from mnllib import CodeCommand, Variable
+            # for i, command in enumerate(self.parent.fevent_manager.fevent_chunks[0x0128][0].subroutines[0x1B].commands):
+            #     if isinstance(command, CodeCommand) and command.command_id == 2 and i != 0:
+            #         print(i)
+            #         print(command.arguments[1].number)
+
             if unlinear:
-                #self.log.emit(seed, "Destroying Linearity")
-                self.log.emit(seed, "Skipping Tutorials") # temporary more honest log entry
-                self.parent.fevent_manager = open_worldify(self.parent.fevent_manager)
+                self.log.emit(seed, "Skipping Story and Tutorials")
+                self.parent.overlay_field_data.data = open_worldify(
+                    self.parent.fevent_manager,
+                    debug_mode,
+                    self.parent.overlay_field_data.data,
+                    [0, 0x000098A0][self.rom_base],
+                )
 
             if rand_treasure:
                 self.log.emit(seed, "Randomizing Treasure")
+
+                for offset in [[ # goes to each of these offsets (unk in JP) and replaces the 1-up sound for treasure with the key item sound
+                    0x00000000,
+                ], [
+                    0x00084D90,
+                    0x00084D9C,
+                    0x00085734,
+                ]][self.rom_base]:
+                    self.parent.overlay_treasure_data.data[offset + 3] = 0x02
+                    self.parent.overlay_treasure_data.data[offset + 2] = 0x00
+                    self.parent.overlay_treasure_data.data[offset + 1] = 0x00
+                    self.parent.overlay_treasure_data.data[offset + 0] = 0xA1
 
                 treasure_strings = [
                     [
@@ -949,6 +1130,10 @@ class RandoWorker(QtCore.QObject):
                     ],
                     self.tr("Room"),
                     self.tr("Important Items"),
+                    [self.tr("Blitty Rewards"), self.tr("Blitties")],
+                    [self.tr("Mushroom Ball Derby"), self.tr("Mushroom Balls")],
+                    [self.tr("Hide and Seek Toad")],
+                    [self.tr("Kuzzle Rewards"), self.tr("Puzzles")],
                 ]
 
                 treasure, shops, self.parent.overlay_shop_data.data, arm9_data, spoiler_file = randomize_treasure(
@@ -957,6 +1142,7 @@ class RandoWorker(QtCore.QObject):
                     self.parent.treasure_settings,
                     treasure,
                     shops,
+                    self.parent.fevent_manager,
                     BytesIO(arm9_data),
                     [0, 0x000145C0][self.rom_base],
                     [0, 0x0004E6F8][self.rom_base],
@@ -964,10 +1150,13 @@ class RandoWorker(QtCore.QObject):
                     self.parent.overlay_FMap_offsets[1],
                     [0, 0x0004AA30][self.rom_base],
                     [0, 0x0000864C][self.rom_base],
+                    [0, 0x0002C804][self.rom_base],
                     [self.parent.overlay_shop_data.data, self.parent.overlay_field_data.data, self.parent.overlay_treasure_data.data, self.parent.overlay_map_icon_data_file.data],
                     treasure_strings,
                     self.parent.place_text,
                     self.parent.badge_name_text,
+                    all_item_names,
+                    self.parent.font_file,
                     spoiler_file,
                 )
 
@@ -1003,7 +1192,7 @@ class RandoWorker(QtCore.QObject):
 
             if rand_colors:
                 self.log.emit(seed, "Modifying Palette")
-                arm9_data, bobjpc_file, bobjmon_file, bobjui_file, eobjsave_file, fobj_file, fobjpc_file, fobjmon_file, mobj_file, fmap_file, spoiler_file, self.parent.overlay_field_data.data = randomize_colors(
+                arm9_data, bobjpc_file, bobjmon_file, bobjui_file, eobjsave_file, fobj_file, fobjpc_file, fobjmon_file, mobj_file, fmap_file, fdfx_pal_file, spoiler_file, self.parent.overlay_field_data.data = randomize_colors(
                     self,
                     seed,
                     self.parent.palette_settings,
@@ -1023,25 +1212,43 @@ class RandoWorker(QtCore.QObject):
                     self.parent.overlay_MObj_offsets,
                     fmap_file,
                     self.parent.overlay_FMap_offsets,
+                    fdfx_pal_file,
                     spoiler_file,
                     self.tr("Palette"),
                     [self.parent.battle_help_text[0x13], self.parent.battle_help_text[0x14], self.parent.battle_help_text[0x15]],
                     treasure,
                 )
 
-            if write_spoiler_file:
-                self.log.emit(seed, "Writing Spoiler File")
-                with open(os.path.splitext(self.parent.new_path)[0] + "_spoiler.txt", "w") as spoiler_file_w:
-                    spoiler_file_w.write(spoiler_file)
-
             # patching --------------------------------------
             if intro_skip > 0:
                 self.log.emit(seed, "Patching Intro")
                 self.parent.fevent_manager = skip_intro(self.parent.fevent_manager, intro_skip == 2)
 
-            if no_enemies:
+            if no_enemies_ml or no_enemies_kp:
+                blitty_strings = [
+                    self.tr("Room"),
+                    self.tr("Blitties"),
+                ]
+
                 self.log.emit(seed, "Removing Enemies")
-                self.parent.fevent_manager = remove_enemies(self.parent.fevent_manager)
+                spoiler_file = remove_enemies(
+                    seed,
+                    [no_enemies_ml, no_enemies_kp],
+                    self.parent.fevent_manager,
+                    self.parent.overlay_field_data.data,
+                    self.parent.overlay_treasure_data.data,
+                    self.parent.overlay_map_icon_data_file.data,
+                    [0, 0x000098A0][self.rom_base],
+                    self.parent.overlay_FMap_offsets[1],
+                    [0, 0x0004AA30][self.rom_base],
+                    [0, 0x0000864C][self.rom_base],
+                    self.parent.font_file,
+                    all_menu_text,
+                    self.parent.place_text,
+                    self.parent.menu_text,
+                    blitty_strings,
+                    spoiler_file,
+                )
 
             if exp_mult != 1.0:
                 self.log.emit(seed, "Multiplying EXP")
@@ -1051,11 +1258,15 @@ class RandoWorker(QtCore.QObject):
                     exp_mult,
                 )
 
-            if test_target_level > 1:
+            if start_level_ml > 1 or start_level_kp > 1:
                 self.log.emit(seed, "Changing Player Level")
                 self.parent.fevent_manager = change_start_level(
                     self.parent.fevent_manager,
-                    test_target_level,
+                    [
+                        start_level_ml,
+                        start_level_ml,
+                        start_level_kp,
+                    ],
                     arm9_data,
                     [
                         [0, 0x0004F1B8][self.rom_base],
@@ -1064,17 +1275,44 @@ class RandoWorker(QtCore.QObject):
                     ]
                 )
 
-            if chaos_badges:
-                self.log.emit(seed, "Randomizing Badge Combo Effects")
-                arm9 = BytesIO(arm9_data)
-                arm9.seek([0, 0x0004E778][self.rom_base])
-                badge_list = [arm9.read(8) for i in range(16)]
-                random.seed(seed)
-                random.shuffle(badge_list)
-                arm9.seek([0, 0x0004E778][self.rom_base])
-                badge_list = [arm9.write(entry) for entry in badge_list]
-                arm9.seek(0)
-                arm9_data = arm9.read()
+            # if chaos_badges:
+            #     self.log.emit(seed, "Randomizing Badge Combo Effects")
+            #     arm9 = BytesIO(arm9_data)
+            #     arm9.seek([0, 0x0004E778][self.rom_base])
+            #     badge_list = [arm9.read(8) for i in range(16)]
+            #     random.seed(seed)
+            #     random.shuffle(badge_list)
+            #     arm9.seek([0, 0x0004E778][self.rom_base])
+            #     badge_list = [arm9.write(entry) for entry in badge_list]
+            #     arm9.seek(0)
+            #     arm9_data = arm9.read()
+
+            if any([endless_arm, challenge_medal]):
+                self.log.emit(seed, "Applying Extras")
+                if endless_arm:
+                    arm_center_endless(
+                        self.parent.fevent_manager,
+                        self.parent.font_file
+                    )
+
+                if challenge_medal:
+                    self.parent.overlay_monster_data.data = challenge_medal_mode(
+                        self.parent.overlay_monster_data.data,
+                        [0, 0x0000E074][self.rom_base],
+                    )
+                                        
+            # -----------------------------------------------------------------------------------------------------
+            # staff roll
+
+            # self.rom.setFileByName('EDataSR/EObjSR.dat', generate_staff_roll(str(FILES_DIR / 'img_staff_roll.png')))
+
+            # -----------------------------------------------------------------------------------------------------
+            # spoiler
+
+            if write_spoiler_file:
+                self.log.emit(seed, "Writing Spoiler File")
+                with open(os.path.splitext(self.parent.new_path)[0] + "_spoiler.txt", "w") as spoiler_file_w:
+                    spoiler_file_w.write(spoiler_file)
 
             # -----------------------------------------------------------------------------------------------------
             # export rom
@@ -1085,6 +1323,10 @@ class RandoWorker(QtCore.QObject):
             FEvent.seek(0)
             self.rom.setFileByName('FEvent/FEvent.dat', FEvent.read())
 
+            # with open('fevent.dat', 'wb') as fev:
+            #     FEvent.seek(0)
+            #     fev.write(FEvent.read())
+
             self.log.emit(seed, "Rebuilding BAI")
             bai_scn_yo = BytesIO()
             bai_scn_ji = BytesIO()
@@ -1094,8 +1336,34 @@ class RandoWorker(QtCore.QObject):
             bai_scn_ji.seek(0)
             self.rom.setFileByName('BAI/BAI_scn_yo.dat', bai_scn_yo.read())
             self.rom.setFileByName('BAI/BAI_scn_ji.dat', bai_scn_ji.read())
+            bai_mon_yo = BytesIO()
+            bai_mon_ji = BytesIO()
+            bai_mon_cf = BytesIO()
+            self.parent.battle_manager.save_battle_scripts_file(0x2000, bai_mon_yo)
+            self.parent.battle_manager.save_battle_scripts_file(0x4000, bai_mon_ji)
+            self.parent.battle_manager.save_battle_scripts_file(0x7000, bai_mon_cf)
+            bai_mon_yo.seek(0)
+            bai_mon_ji.seek(0)
+            bai_mon_cf.seek(0)
+            self.rom.setFileByName('BAI/BAI_atk_nh.dat', bai_mon_yo.read())
+            self.rom.setFileByName('BAI/BAI_atk_yy.dat', bai_mon_ji.read())
+            self.rom.setFileByName('BAI/BAI_atk_hk.dat', bai_mon_cf.read())
+            bai_atk_nh = BytesIO()
+            bai_atk_yy = BytesIO()
+            bai_atk_hk = BytesIO()
+            self.parent.battle_manager.save_battle_scripts_file(0xA000, bai_atk_nh)
+            self.parent.battle_manager.save_battle_scripts_file(0xC000, bai_atk_yy)
+            self.parent.battle_manager.save_battle_scripts_file(0xD000, bai_atk_hk)
+            bai_atk_nh.seek(0)
+            bai_atk_yy.seek(0)
+            bai_atk_hk.seek(0)
+            self.rom.setFileByName('BAI/BAI_atk_nh.dat', bai_atk_nh.read())
+            self.rom.setFileByName('BAI/BAI_atk_yy.dat', bai_atk_yy.read())
+            self.rom.setFileByName('BAI/BAI_atk_hk.dat', bai_atk_hk.read())
 
             self.log.emit(seed, "Packing ROM")
+            self.rom.pad200 = b'\0' * 0x3E00 # get rid of the DSi-exclusive checksums, if there are any
+
             overlay_3 = BytesIO(self.parent.overlay_field_data.data)
             self.parent.fevent_manager.save_overlay3(overlay_3)
             overlay_3.seek(0)
@@ -1113,9 +1381,11 @@ class RandoWorker(QtCore.QObject):
             self.rom.setFileByName('FObjMon/FObjMon.dat', fobjmon_file)
             self.rom.setFileByName('MObj/MObj.dat', mobj_file)
             self.rom.setFileByName('FMap/FMapData.dat', fmap_file)
+            self.rom.setFileByName('FRfx/FDfxPal.dat', fdfx_pal_file)
 
             if self.rom_base == 1:
                 self.rom.files[self.parent.overlays[3].fileID] = self.parent.overlay_field_data.save(compress = True)
+                self.rom.files[self.parent.overlays[4].fileID] = self.parent.overlay_treasure_data.save(compress = True)
                 self.rom.files[self.parent.overlays[6].fileID] = self.parent.overlay_fevent_data.save(compress = True)
                 self.rom.files[self.parent.overlays[11].fileID] = self.parent.overlay_monster_data.save(compress = True)
                 self.rom.files[self.parent.overlays[123].fileID] = self.parent.overlay_menu_data.save(compress = True)
@@ -1146,7 +1416,9 @@ class RandoWorker(QtCore.QObject):
 
             self.log.emit(seed, "Complete!")
             self.finished.emit()
+            print("randomization end")
         except Exception as e:
+            print("randomization fail")
             string = traceback.format_exc().replace("\n", "<br>")
 
             self.throw_error(f'An exception has occurred!<br><br>Traceback:<pre>{string}</pre>', seed)

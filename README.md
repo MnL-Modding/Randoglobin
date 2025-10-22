@@ -6,14 +6,17 @@ Randoglobin is a randomizer for Mario and Luigi: Bowser's Inside Story.
 This program is still in development, and will see far more features in the future.
 
 # Credits
-[ThePurpleAnon](https://bsky.app/profile/thepurpleanon.bsky.social) - Python Code / UI Design
+[ThePurpleAnon](https://bsky.app/profile/thepurpleanon.bsky.social) ![Bluesky](randoglobin/files/img_soc_bsky.png) - Python Code / UI Design / Program Music and Sounds
 
-[DimiDimit](https://github.com/DimiDimit) - Additional Code and Patches / [`mnllib.py`](https://github.com/MnL-Modding/mnllib.py) & [`.rs`](https://github.com/MnL-Modding/mnllib.rs)
+[DimiDimit](https://github.com/DimiDimit) ![Github](randoglobin/files/img_soc_github.png) - Additional Code and Patches / [`mnllib.py`](https://github.com/MnL-Modding/mnllib.py) & [`.rs`](https://github.com/MnL-Modding/mnllib.rs) / [`mnlscript.py`](https://github.com/MnL-Modding/mnlscript.py)
 
-[MiiK](https://bsky.app/profile/miikheaven.bsky.social) - Randoglobin Icon / Additional Graphics
+[MiiK](https://bsky.app/profile/miikheaven.bsky.social) ![Bluesky](randoglobin/files/img_soc_bsky.png) - Randoglobin Icon / Additional Graphics / Palette Randomization Colors
+
+[kattnip](https://bsky.app/profile/kattnip.supermariogalaxy2.com) ![Bluesky](randoglobin/files/img_soc_bsky.png) - Key Item Shop Sprites
 
 Translators:
-- Español ![NA-ES Flag](randoglobin/lang/NA-ES.png) - [AngelThe_M](https://bsky.app/profile/angelthem.bsky.social)
+- Español ![NA-ES Flag](randoglobin/lang/NA-ES.png) - [AngelThe_M](https://bsky.app/profile/angelthem.bsky.social) ![Bluesky](randoglobin/files/img_soc_bsky.png)
+- Français (EU) ![EU-FR Flag](randoglobin/lang/EU-FR.png) - [Wirare](## "Discord: wirare") ![Discord](randoglobin/files/img_soc_discord.png)
 
 # Running the Program
 There are 4 ways to run this program, from easiest to most complicated:

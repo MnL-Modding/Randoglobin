@@ -360,7 +360,7 @@ def create_textbox(_palette, _box_graph, _box_type, _width, _height, _font_file,
         img.paste(text_img, ((img.width // 2) - (text_img.width // 2), 0), text_img)
     return QtGui.QPixmap(QtGui.QImage(ImageQt(img)))
 
-def interpret_character(font_file, palette, char_id, color):
+def interpret_character(font_file, palette, char_id, color = None):
     char_map_size, char_map_offset, glyph_table_offset = struct.unpack('<III', font_file.read(0xC))
 
     font_file.seek(char_map_offset + (char_id * 2))
@@ -379,19 +379,77 @@ def interpret_character(font_file, palette, char_id, color):
     glyph_size = (glyph_height * glyph_width) // 4
     font_file.seek(glyph_table_offset + 4 + (char_width_table_length * 4) + (char * ((glyph_height * glyph_width) // 4)))
 
-    for x in range(0, glyph_width, 8):
-        buffer_len = min(4, (glyph_width - x) // 2)
-        for y in range(0, glyph_height, 4):
-            alpha_buffer = font_file.read(buffer_len)
-            color_buffer = font_file.read(buffer_len)
+    if palette is not None:
+        for x in range(0, glyph_width, 8):
+            buffer_len = min(4, (glyph_width - x) // 2)
+            for y in range(0, glyph_height, 4):
+                alpha_buffer = font_file.read(buffer_len)
+                color_buffer = font_file.read(buffer_len)
 
-            glyph_section = Image.new("RGBA", (8, 4))
-            for z in range(buffer_len * 8):
-                pixel_alpha = (alpha_buffer[z // 8] >> (z % 8)) & 1
-                pixel_color = (color_buffer[z // 8] >> (z % 8)) & 1
-                if pixel_alpha == 0: continue
-                
-                glyph_section.putpixel((z // 4, z % 4), tuple(palette[(1 + color + pixel_color) % 16]))
-            glyph.paste(glyph_section, (x, y), glyph_section)
+                glyph_section = Image.new("RGBA", (8, 4))
+                for z in range(buffer_len * 8):
+                    pixel_alpha = (alpha_buffer[z // 8] >> (z % 8)) & 1
+                    pixel_color = (color_buffer[z // 8] >> (z % 8)) & 1
+                    if pixel_alpha == 0: continue
+
+                    glyph_section.putpixel((z // 4, z % 4), tuple(palette[(1 + color + pixel_color) % 16]))
+                glyph.paste(glyph_section, (x, y), glyph_section)
 
     return [glyph, char_width]
+
+def generate_sprites_from_sheet(filename, amt, size):
+    sheet = Image.open(filename)
+    sprites = []
+
+    sprite_amt_horiz = sheet.width // size[0]
+    for i in range(amt):
+        x1 = (size[0] * (i % sprite_amt_horiz))
+        y1 = (size[1] * (i // sprite_amt_horiz))
+        x2 = x1 + size[0]
+        y2 = y1 + size[1]
+
+        img = sheet.crop((x1, y1, x2, y2))
+        
+        sprites.append(QtGui.QPixmap(QtGui.QImage(ImageQt(img))))
+    
+    return sprites
+
+def generate_staff_roll(filename):
+    sheet = Image.open(filename)
+    size = (160, 128)
+    color_amt = 256
+    img_amt = 16
+
+    out_pal = bytearray()
+    out_img = bytearray()
+
+    for i in range(img_amt):
+        x1 = (size[0] * (i  % (img_amt // 2)))
+        y1 = (size[1] * (i // (img_amt // 2)))
+        x2 = x1 + size[0]
+        y2 = y1 + size[1]
+
+        img = sheet.crop((x1, y1, x2, y2))
+        img = img.quantize(color_amt, 2)
+
+        # palette data
+        pal_chunk = img.getpalette()
+        for j in range(color_amt):
+            r = pal_chunk[0 + (j * 3)] >> 3
+            g = pal_chunk[1 + (j * 3)] >> 3
+            b = pal_chunk[2 + (j * 3)] >> 3
+
+            color = r + (g << 5) + (b << 10)
+            out_pal += color.to_bytes(2, 'little')
+
+        # image data
+        img_chunk = bytearray(img.tobytes())
+        for j in range(size[1]):
+            list_start = size[0] * j
+            list_end = size[0] * (j + 1)
+            img_line = img_chunk[list_start:list_end]
+
+            out_img += img_line
+            out_img += bytearray([img_line[size[0] - 1]]) * (256 - size[0])
+    
+    return bytearray(out_pal + out_img + bytes(0x200))

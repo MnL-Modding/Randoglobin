@@ -60,9 +60,14 @@ def randomize_music(seed, settings, overlay_data, map_metadata_offset, fevent_ma
                             case (0x12E, 0x3B): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x3A, 0x263))] + 1
                             case (0x15D, 0x42): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x42, 0x263))]
                             case (0x1F9, 0x39): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x38, 0x261))] + 1
+                            case (0x252, 0x44): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x44, 0x265))]
+                            
+                            # vanilla funny bone cutscene
                             case (0x1FB, 0x42): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x42, 0x263))]
                             case (0x1FB, 0x43): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x42, 0x263))] + 1
-                            case (0x252, 0x44): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x44, 0x265))]
+                            # accelerated funny bone cutscene
+                            case (0x1FC, 0x42): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x42, 0x263))]
+                            case (0x1FC, 0x43): command.arguments[1] = double_music_tracks[double_map_music.index(( 0x42, 0x263))] + 1
     
     if settings.affect_cutscenes.isChecked() and len(settings.cutscene_music_list) > 0:
         for chunk_triple in fevent_manager.fevent_chunks:

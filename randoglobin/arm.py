@@ -21,7 +21,8 @@ def apply_arm_patches(rom, patches_needed):
         if armips_path is None:
             return 1,
 
-    bis_code_patch_archive_path = cached_path('https://github.com/MnL-Modding/MnL-Code-Patching/releases/latest/download/bis.zip')
+    #bis_code_patch_archive_path = cached_path('https://github.com/MnL-Modding/MnL-Code-Patching/releases/latest/download/bis.zip')
+    bis_code_patch_archive_path = cached_path(str(FILES_DIR / 'bis.zip'))
     with TemporaryDirectory() as patching_dir:
         patching_dir = Path(patching_dir)
         with ZipFile(bis_code_patch_archive_path, 'r') as code_patch_archive:
@@ -48,6 +49,11 @@ def apply_arm_patches(rom, patches_needed):
         patches_to_use = []
         if patches_needed["shop_patch"]:
             patches_to_use.extend(['-definelabel', 'F_MIXED_SHOP', '1'])
+        if patches_needed["impossible"]:
+            patches_to_use.extend(['-definelabel', 'F_IMPOSSIBLE_MODE', '1'])
+        if patches_needed["no_music"]:
+            patches_to_use.extend(['-definelabel', 'F_NO_MUSIC', '1'])
+        patches_to_use.extend(['-definelabel', 'F_YOGORE_BLITTY_COUNT', '1'])
 
         try:
             subprocess.run(
