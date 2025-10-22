@@ -1,13 +1,23 @@
 import codecs
 import types
+import collections
 import typing
 
 from dynamicscope import DYNAMIC_SCOPE
 import mnllib
 import mnllib.bis
 
-from mnlscript.utils import fhex
-from mnlscript.bis.globals import Globals
+def fhex(num: int, width: int = 0) -> str:
+    return f"{"-" if num < 0 else ""}0x{abs(num):0{width}X}"
+
+class Globals:
+    fevent_manager: mnllib.bis.FEventScriptManager = typing.cast(
+        mnllib.bis.FEventScriptManager, None
+    )
+
+    text_tables: collections.defaultdict[
+        int, dict[int, mnllib.bis.TextTable | bytes | None]
+    ] = collections.defaultdict(dict)
 
 
 type LanguageName = typing.Literal["jp", "en", "fr", "de", "it", "es"]
