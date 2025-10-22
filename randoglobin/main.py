@@ -1108,6 +1108,7 @@ class RandoWorker(QtCore.QObject):
                     [0, 0x000098A0][self.rom_base],
                 )
 
+            coins_string = None
             if rand_treasure:
                 self.log.emit(seed, "Randomizing Treasure")
 
@@ -1150,7 +1151,7 @@ class RandoWorker(QtCore.QObject):
                     [self.tr("Kuzzle Rewards"), self.tr("Puzzles")],
                 ]
 
-                treasure, shops, self.parent.overlay_shop_data.data, arm9_data, spoiler_file = randomize_treasure(
+                treasure, shops, self.parent.overlay_shop_data.data, arm9_data, spoiler_file, coins_string = randomize_treasure(
                     self,
                     seed,
                     self.parent.treasure_settings,
@@ -1306,7 +1307,8 @@ class RandoWorker(QtCore.QObject):
                 if endless_arm:
                     arm_center_endless(
                         self.parent.fevent_manager,
-                        self.parent.font_file
+                        self.parent.font_file,
+                        coins_string
                     )
 
                 if challenge_medal:

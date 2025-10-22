@@ -335,7 +335,7 @@ def create_blitty_hiding_spot(fevent_manager, room_id, coords, blitty_flag, key_
 ##################################################################################
 
 
-def arm_center_endless(fevent_manager, font_file):
+def arm_center_endless(fevent_manager, font_file, coins_string):
     room_id = 0x1C
     script = fevent_manager.fevent_chunks[room_id][0]
     subroutine_num = len(script.subroutines)
@@ -377,7 +377,10 @@ def arm_center_endless(fevent_manager, font_file):
             
         coin_mes_box_id = len(fevent_manager.fevent_chunks[room_id][2].text_tables[0x43 + i].entries)
         
-        string = fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i].entries[0x2D].replace(b"10", b"99990") # "You got 10 coins!"
+        if coins_string is None:
+            string = fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i].entries[0x2D].replace(b"10", b"99990") # "You got 10 coins!"
+        else:
+            string = coins_string[i].replace(b"10", b"99990")
         fevent_manager.fevent_chunks[room_id][2].text_tables[0x43 + i].textbox_sizes.append(get_meswin_size(string, font_file))
 
         string = string.replace(b"99990", b"\xff\x0f\x00\x05")
