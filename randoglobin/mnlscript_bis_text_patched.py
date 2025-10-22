@@ -6,8 +6,8 @@ from dynamicscope import DYNAMIC_SCOPE
 import mnllib
 import mnllib.bis
 
-from ..utils import fhex
-from .globals import Globals
+from mnlscript.utils import fhex
+from mnlscript.bis.globals import Globals
 
 
 type LanguageName = typing.Literal["jp", "en", "fr", "de", "it", "es"]
