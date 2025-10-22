@@ -99,18 +99,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # -------------------------------------------------------------------------------
 
+        try:
+            translator = QtCore.QTranslator()
+            if translator.load(str(LANG_DIR / f'{config.get('UserPreferences', 'lang')}.qm')):
+                parent.installTranslator(translator)
+        except configparser.NoOptionError:
+            translator = QtCore.QTranslator()
+            if translator.load(str(LANG_DIR / f'NA-EN.qm')):
+                parent.installTranslator(translator)
+
         self.import_rom(False)
 
         # -------------------------------------------------------------------------------
 
-        self.muted = config.get('UserPreferences', 'muted')
-        target_lang = config.get('UserPreferences', 'lang')
-        for i, language in enumerate(LANGUAGES):
-            if language[1] == target_lang:
-                self.change_lang(i)
-                return
+        try:
+            self.muted = config.get('UserPreferences', 'muted')
+        except configparser.NoOptionError:
+            self.toggle_mute(False)
         
-        self.change_lang(LANGUAGES.index(["English (NA)", "NA-EN", 1]))
+        try:
+            target_lang = config.get('UserPreferences', 'lang')
+            for i, language in enumerate(LANGUAGES):
+                if language[1] == target_lang:
+                    self.change_lang(i)
+                    return
+        except configparser.NoOptionError:
+            self.change_lang(LANGUAGES.index(["English (NA)", "NA-EN", 1]))
 
     def import_rom(self, repeat_import = True):
         QtWidgets.QMessageBox.information(
