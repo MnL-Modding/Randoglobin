@@ -3,6 +3,8 @@ from io import BytesIO
 from math import ceil
 
 from mnlscript.bis import add_coins, add_items
+def thingy(): pass
+mnlscript.bis.text.emit_text_entry = thingy
 
 class Treasure:
     def __init__(self):

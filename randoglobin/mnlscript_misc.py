@@ -3,6 +3,8 @@ from mnllib.bis import *
 from mnlscript import label, return_, CodeCommandWithOffsets, update_commands_with_offsets, SubroutineExt
 from mnlscript.bis import Variables, Actors, StackTopModification, StackPopCondition, Sound
 from mnlscript.bis.commands import *
+def thingy(): pass
+mnlscript.bis.text.emit_text_entry = thingy
 
 from typing import cast
 from copy import deepcopy
