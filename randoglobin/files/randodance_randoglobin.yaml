@@ -1,0 +1,246 @@
+dancer_name: "Randoglobin"
+dancer_icon: "ico_randoglobin.ico"
+
+sprite_sheet: "img_dance_randoglobin.png"
+sprite_width: 96
+sprite_height: 80
+sprite_amount: 20
+sprite_scale: 3
+
+background_sprite: 12
+idle_dance: dancer_idle
+framerate: 24
+
+art_credit: "MiiK"
+randodance_credit: "ThePurpleAnon"
+
+
+sounds:
+  dancer_idle:
+    loop: True
+    length: 1.000
+    tempo: 120
+    subdiv: 2
+    dance:
+      idle;1
+
+  spritoglobin_end:
+    name: "Success! - Spritoglobin"
+    icon: "ico_spritoglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_spritoglobin_success.wav"
+    loop: False
+    length: 3.000
+    tempo: 140
+    subdiv: 3
+    dance:
+      success;1
+
+  cheatoglobin_end:
+    name: "Success! - Cheatoglobin"
+    icon: "ico_cheatoglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_cheatoglobin_success.wav"
+    loop: False
+    length: 3.000
+    tempo: 120
+    subdiv: 3
+    dance:
+      success_alt2;1
+
+  dataglobin_end:
+    name: "Success! - Dataglobin"
+    icon: "ico_dataglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_dataglobin_success.wav"
+    loop: False
+    length: 2.769
+    tempo: 130
+    subdiv: 3
+    dance:
+      success_alt1;1
+
+  randoglobin_start:
+    name: "Let the Randomization Begin!"
+    icon: "ico_randoglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_randoglobin_wait.wav"
+    loop: True
+    length: 16.000
+    tempo: 120
+    subdiv: 2
+    dance:
+      loop0;4
+      loop1;4
+      loop0;4
+      loop1;4
+
+  randoglobin_end:
+    name: "Success! - Randoglobin"
+    icon: "ico_randoglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_randoglobin_success.wav"
+    loop: False
+    length: 3.870
+    tempo: 124
+    subdiv: 3
+    dance:
+      success_intro;1
+      success;1
+
+  randoglobin_fail:
+    name: "Failure... - Randoglobin"
+    icon: "ico_randoglobin.ico"
+    credit: "ThePurpleAnon"
+    filename: "snd_randoglobin_fail.wav"
+    loop: False
+    length: 1.935
+    tempo: 124
+    subdiv: 1
+    dance:
+      fail;1
+
+
+dances:
+  idle:
+    idle_0
+    idle_1
+    idle_2
+    idle_3
+
+  loop0:
+    point_lup;bump_left
+    point_mid
+    point_rup;bump_right
+    point_mid
+
+  loop1:
+    ass_l;bump_left
+    ass_m
+    ass_r;bump_right
+    ass_m
+
+  success_intro:
+    amaze;shake_big
+    amaze
+    amaze
+
+  success:
+    point_lfa;slide_right
+    point_lfa
+    point_mid;slide_left
+    point_rfa;slide_left
+    point_rfa
+    point_mid;slide_right
+    amaze;shake_small
+    amaze
+    amaze
+    jump;jump_big
+
+  success_alt1:
+    point_lup;slide_right
+    point_lup
+    point_mid;slide_left
+    point_rup;slide_left
+    point_rup
+    point_mid;slide_right
+    amaze;shake_small
+    amaze
+    amaze
+    jump;jump_big
+
+  success_alt2:
+    ass_l;bump_left
+    ass_l
+    ass_m
+    ass_r;bump_right
+    ass_r
+    ass_m
+    point_mid;shake_small
+    point_mid
+    point_mid
+    jump;jump_big
+
+  fail:
+    amaze;shake_big
+    fucking_dead;fall_right
+
+
+images:
+  idle_pose:
+    sprite: 0
+    shadow: 13
+  point_mid:
+    sprite: 3
+    shadow: 13
+  point_lup:
+    sprite: 2
+    shadow: 14
+    shadow_offset_x: -10
+  point_rup:
+    sprite: 4
+    shadow: 14
+    shadow_offset_x: 10
+  point_lfa:
+    sprite: 1
+    shadow: 14
+    shadow_offset_x: -8
+  point_rfa:
+    sprite: 5
+    shadow: 14
+    shadow_offset_x: 8
+  ass_m:
+    sprite: 7
+    shadow: 13
+  ass_l:
+    sprite: 6
+    shadow: 13
+    shadow_offset_x: -3
+  ass_r:
+    sprite: 8
+    shadow: 13
+    shadow_offset_x: 3
+  amaze:
+    sprite: 9
+    shadow: 13
+  jump:
+    sprite: 10
+    shadow: 14
+  fucking_dead:
+    sprite: 11
+    shadow: 14
+    shadow_offset_x: 10
+  tpose:
+    sprite: 15
+    shadow: 13
+  idle_0:
+    sprite: 16
+    shadow: 13
+  idle_1:
+    sprite: 17
+    shadow: 13
+  idle_2:
+    sprite: 18
+    shadow: 13
+  idle_3:
+    sprite: 19
+    shadow: 13
+
+
+animations:
+  bump_left:
+    x_offset_list: -2,-3,-3,-2,0
+  bump_right:
+    x_offset_list: 2,3,3,2,0
+  slide_left:
+    x_offset_list: -3,-1,0
+  slide_right: 
+    x_offset_list: 3,1,0
+  shake_small:
+    x_offset_list: 2,-2,1,-1,0
+  shake_big:
+    x_offset_list: 3,-3,2,-2,1,-1,0
+  jump_big:
+    y_offset_list: -6,-11,-15,-18,-20,-21,-21,-20,-18,-15,-11,-6,0
+  fall_right:
+    x_offset_list: -5,-3,-2,-1,0

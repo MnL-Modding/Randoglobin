@@ -190,3 +190,7 @@ armips
 
 # translation files
 *.ts
+
+# emulator shit
+*.ml*
+*.mch

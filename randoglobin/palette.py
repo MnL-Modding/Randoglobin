@@ -1,9 +1,10 @@
-import random
-import struct
-from io import BytesIO
-
 if '__compiled__' not in globals():
     import rustimport.import_hook
+
+import random
+import struct
+import colorsys
+from io import BytesIO
 
 from PySide6 import QtCore, QtGui, QtWidgets
 from functools import partial
@@ -14,7 +15,7 @@ from randoglobin.rust import modify_maps
 
 # ============================================================================================================================
 
-def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bobj_files, bobj_overlays, bobj_offsets, eobj_files, eobj_overlays, eobj_offsets, fobj_files, fobj_overlays, fobj_offsets, mobj_files, mobj_overlays, mobj_offsets, fmap_file, fmap_offsets, spoiler_file, palette_string, player_names, treasure_info):
+def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bobj_files, bobj_overlays, bobj_offsets, eobj_files, eobj_overlays, eobj_offsets, fobj_files, fobj_overlays, fobj_offsets, mobj_files, mobj_overlays, mobj_offsets, fmap_file, fmap_offsets, fdfx_pal_file, spoiler_file, palette_string, player_names, treasure_info):
     random.seed(seed)
     if settings.use_custom_colors.isChecked():
         bros_colors = [
@@ -61,15 +62,8 @@ def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bob
         if not settings.swap_colors_allowed.isChecked():
             bros_colors[4] = False
             bros_colors[5] = False
-    
-    arm9_file = assign_text_colors(
-        bros_colors,
-        koopa_colors,
-        settings.default_buttons.isChecked(),
-        arm9_file,
-        arm9_palette_offset)
 
-    bobj_files = assign_bobj_colors(
+    bobj_files, aura_pal = assign_bobj_colors(
         bros_colors,
         koopa_colors,
         settings.default_buttons.isChecked(),
@@ -87,16 +81,18 @@ def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bob
         eobj_offsets,
     )
 
-    fobj_files = assign_fobj_colors(
+    fobj_files, fdfx_pal_file = assign_fobj_colors(
         bros_colors,
         koopa_colors,
         settings.default_buttons.isChecked(),
         fobj_files,
         fobj_overlays[0],
         fobj_offsets,
+        fdfx_pal_file,
+        aura_pal,
     )
 
-    mobj_files = assign_mobj_colors(
+    mobj_files, menu_text_colors = assign_mobj_colors(
         bros_colors,
         koopa_colors,
         settings.default_buttons.isChecked(),
@@ -104,11 +100,29 @@ def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bob
         mobj_overlays,
         mobj_offsets,
     )
+    
+    arm9_file = assign_text_colors(
+        bros_colors,
+        koopa_colors,
+        settings.default_buttons.isChecked(),
+        arm9_file,
+        arm9_palette_offset,
+        menu_text_colors,
+    )
 
     overlay3 = bytearray(fobj_overlays[0])
     if not settings.default_buttons.isChecked():
+        mario_pal_0 = struct.pack('<4H', *generate_color_lists(PAL_0_CHOICES[bros_colors[0]]))
+        luigi_pal_0 = struct.pack('<4H', *generate_color_lists(PAL_0_CHOICES[bros_colors[2]]))
+        mario_pal_1 = struct.pack('<4H', *generate_color_lists(PAL_1_CHOICES[bros_colors[1]]))
+        luigi_pal_1 = struct.pack('<4H', *generate_color_lists(PAL_1_CHOICES[bros_colors[3]]))
         mario_pal_2 = struct.pack('<5H', *generate_color_lists(PAL_2_CHOICES[bros_colors[0]]))
         luigi_pal_2 = struct.pack('<5H', *generate_color_lists(PAL_2_CHOICES[bros_colors[2]]))
+
+        if bros_colors[4]:
+            mario_pal_0, mario_pal_1 = mario_pal_1, mario_pal_0
+        if bros_colors[5]:
+            luigi_pal_0, luigi_pal_1 = luigi_pal_1, luigi_pal_0
 
         fobj_overlays[1] = bytearray(fobj_overlays[1])
 
@@ -117,6 +131,10 @@ def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bob
             bytes(treasure_info),
             overlay3,
             bytearray(fobj_overlays[1]),
+            mario_pal_0,
+            luigi_pal_0,
+            mario_pal_1,
+            luigi_pal_1,
             mario_pal_2,
             luigi_pal_2,
         )
@@ -144,11 +162,11 @@ def randomize_colors(parent, seed, settings, arm9_file, arm9_palette_offset, bob
     spoiler_file += f"{PaletteTab.tr("Face")}: {settings.PAL_KP_2_NAMES[koopa_colors[2]]}\n"
     spoiler_file += f"{PaletteTab.tr("Hair")}: {settings.PAL_KP_3_NAMES[koopa_colors[3]]}"
 
-    return arm9_file, *bobj_files, *eobj_files, *fobj_files, *mobj_files, fmap_file, spoiler_file, overlay3
+    return arm9_file, *bobj_files, *eobj_files, *fobj_files, *mobj_files, fmap_file, fdfx_pal_file, spoiler_file, overlay3
 
 # ============================================================================================================================
 
-def assign_text_colors(bros_colors, koopa_colors, default_buttons, arm9_file, palette_offset):
+def assign_text_colors(bros_colors, koopa_colors, default_buttons, arm9_file, palette_offset, menu_text_colors):
     if default_buttons:
         return arm9_file
 
@@ -172,6 +190,9 @@ def assign_text_colors(bros_colors, koopa_colors, default_buttons, arm9_file, pa
     arm9.write(text_pal_2b)
     arm9.seek(2 * 2, 1)
     arm9.write(text_pal_0b)
+
+    arm9.seek(palette_offset + 0x74)
+    arm9.write(menu_text_colors)
 
     arm9.seek(0)
     return arm9.read()
@@ -410,6 +431,21 @@ def assign_bobj_colors(bros_colors, koopa_colors, default_buttons, bobj_file, ov
         else:
             bobjpc_file.write(bytes([luigi_pal_0[i] for i in [0, 1, 4, 5]]))
 
+        #overlay_data_group.seek(overlay_offsets[0][1] + (0x20 * 4)) # falling star TODO: fix the graphics for this
+        #overlay_data_file.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        #bobjpc_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x11 * 2))
+        #bobjpc_file.write(bytes([mario_pal_2a[i] for i in [0, 1]]))
+        #if bros_colors[4]:
+        #    bobjpc_file.write(mario_pal_1)
+        #else:
+        #    bobjpc_file.write(mario_pal_0)
+        #bobjpc_file.write(bytes([luigi_pal_2a[i] for i in [0, 1]]))
+        #if bros_colors[5]:
+        #    bobjpc_file.write(luigi_pal_1)
+        #else:
+        #    bobjpc_file.write(luigi_pal_0)
+
         overlay_data_group.seek(overlay_offsets[1][1] + (0x6e * 4)) # memory m
         overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
 
@@ -556,6 +592,136 @@ def assign_bobj_colors(bros_colors, koopa_colors, default_buttons, bobj_file, ov
 
         bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x7 * 2))
         bobjui_file.write(luigi_pal_2)
+        
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0xD * 4)) # grabbing the bros ui colors
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x12 * 2))
+        col_0 = bobjui_file.read(0x7 * 2)
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0xD * 4)) # grabbing the bros ui colors
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x22 * 2))
+        col_1 = bobjui_file.read(0x7 * 2)
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0xE * 4)) # grabbing the bowser ui colors
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x9 * 2))
+        col_2 = bobjui_file.read(0x7 * 2)
+
+        # use the "_1" lists to determine if the HUD should be a different color shift than everything else
+        if PAL_ML_UI_CHOICES_1[bros_colors[0]] is None: 
+            mario_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_ML_UI_CHOICES[bros_colors[0]][0]], PAL_ML_UI_CHOICES[bros_colors[0]], True))
+        else:
+            mario_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_ML_UI_CHOICES_1[bros_colors[0]][0]], PAL_ML_UI_CHOICES_1[bros_colors[0]], True))
+            
+        if PAL_ML_UI_CHOICES_1[bros_colors[2]] is None: 
+            luigi_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_ML_UI_CHOICES[bros_colors[2]][0]], PAL_ML_UI_CHOICES[bros_colors[2]], True))
+        else:
+            luigi_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_ML_UI_CHOICES_1[bros_colors[2]][0]], PAL_ML_UI_CHOICES_1[bros_colors[2]], True))
+            
+        if PAL_KP_UI_CHOICES_1[koopa_colors[0]] is None: 
+            koopa_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_KP_UI_CHOICES[koopa_colors[0]][0]], PAL_KP_UI_CHOICES[koopa_colors[0]], True))
+        else:
+            koopa_pal_ui = struct.pack('<7H', *generate_shifted_colors([col_0, col_1, col_2][PAL_KP_UI_CHOICES_1[koopa_colors[0]][0]], PAL_KP_UI_CHOICES_1[koopa_colors[0]], True))
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0xD * 4)) # bros hud
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x12 * 2))
+        bobjui_file.write(mario_pal_ui)
+        bobjui_file.seek(0x9 * 2, 1)
+        bobjui_file.write(luigi_pal_ui)
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0xE * 4)) # bowser hud 1
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x9 * 2))
+        bobjui_file.write(koopa_pal_ui)
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0x13 * 4)) # bowser hud 2
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x2 * 2))
+        bobjui_file.write(koopa_pal_ui)
+        
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0x17 * 4)) # grabbing the bros ui colors
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        pal_off = int.from_bytes(overlay_data_file.read(4), 'little')
+
+        bobjui_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[0]][0])) * 2))
+        mario_pal_ui = struct.pack('<8H', *generate_shifted_colors(bobjui_file.read(0x8 * 2), PAL_ML_UI_CHOICES[bros_colors[0]], True, True))
+
+        bobjui_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[2]][0])) * 2))
+        luigi_pal_ui = struct.pack('<8H', *generate_shifted_colors(bobjui_file.read(0x8 * 2), PAL_ML_UI_CHOICES[bros_colors[2]], True, True))
+
+        bobjui_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_KP_UI_CHOICES[koopa_colors[0]][0])) * 2))
+        koopa_pal_ui = struct.pack('<8H', *generate_shifted_colors(bobjui_file.read(0x8 * 2), PAL_KP_UI_CHOICES[koopa_colors[0]], True, True))
+
+        overlay_data_group.seek(overlay_offsets[2][1] + (0x17 * 4)) # victory platform
+        overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjui_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x12 * 2))
+        bobjui_file.write(mario_pal_ui)
+        bobjui_file.seek(0x8 * 2, 1)
+        bobjui_file.write(luigi_pal_ui)
+        bobjui_file.seek(0x8 * 2, 1)
+        bobjui_file.write(bytes([koopa_pal_ui[i] for i in [0, 1, 2, 3, 4, 5, 14, 15, 6, 7, 8, 9, 10, 11, 12, 13]]))
+
+        
+        overlay_data_group.seek(overlay_offsets[1][1] + (0x7C * 4)) # grabbing the bros aura colors
+        overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        pal_off = int.from_bytes(overlay_data_file.read(4), 'little')
+
+        bobjmon_file.seek(pal_off + 4 + ((0x22 + (0x5 * PAL_ML_AURA_CHOICES[bros_colors[0]][0])) * 2))
+        mario_pal_aura = struct.pack('<5H', *generate_shifted_colors(bobjmon_file.read(0x5 * 2), PAL_ML_AURA_CHOICES[bros_colors[0]]))
+
+        bobjmon_file.seek(pal_off + 4 + ((0x22 + (0x5 * PAL_ML_AURA_CHOICES[bros_colors[2]][0])) * 2))
+        luigi_pal_aura = struct.pack('<5H', *generate_shifted_colors(bobjmon_file.read(0x5 * 2), PAL_ML_AURA_CHOICES[bros_colors[2]]))
+
+        #overlay_data_group.seek(overlay_offsets[0][1] + (0x25 * 4)) # falling star aura TODO: uncomment after fixing the other thing
+        #overlay_data_file.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        #bobjpc_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x2 * 2))
+        #bobjpc_file.write(mario_pal_aura)
+        #bobjpc_file.seek(0xB * 2, 1)
+        #bobjpc_file.write(luigi_pal_aura)
+
+        overlay_data_group.seek(overlay_offsets[1][1] + (0x7C * 4)) # dark star minion thingies aura
+        overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjmon_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x22 * 2))
+        bobjmon_file.write(mario_pal_aura)
+        bobjmon_file.write(luigi_pal_aura)
+
+        overlay_data_group.seek(overlay_offsets[1][1] + (0x96 * 4)) # dark star(?) aura
+        overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjmon_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x2 * 2))
+        bobjmon_file.write(mario_pal_aura)
+        bobjmon_file.write(luigi_pal_aura)
+
+        overlay_data_group.seek(overlay_offsets[1][1] + (0xEC * 4)) # another aura ig
+        overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjmon_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x2 * 2))
+        bobjmon_file.write(mario_pal_aura)
+        bobjmon_file.write(luigi_pal_aura)
+
+        overlay_data_group.seek(overlay_offsets[1][1] + (0x14 * 4)) # aura balls
+        overlay_data_file.seek(overlay_offsets[1][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+        bobjmon_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x1 * 2))
+        bobjmon_file.write(bytes([0xFF, 0x7F]))
+        bobjmon_file.write(bytes([mario_pal_aura[i] for i in [0, 1, 4, 5, 8, 9]]))
+        bobjmon_file.seek(0xC * 2, 1)
+        bobjmon_file.write(bytes([0xFF, 0x7F]))
+        bobjmon_file.write(bytes([luigi_pal_aura[i] for i in [0, 1, 4, 5, 8, 9]]))
+    
+    else:
+
+        mario_pal_aura, luigi_pal_aura = None, None
 
     overlay_data_group.seek(overlay_offsets[2][1] + (0x3D * 4)) # giant bowser head
     overlay_data_file.seek(overlay_offsets[2][0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
@@ -572,7 +738,7 @@ def assign_bobj_colors(bros_colors, koopa_colors, default_buttons, bobj_file, ov
     bobjpc_file.seek(0)
     bobjmon_file.seek(0)
     bobjui_file.seek(0)
-    return [bobjpc_file.read(), bobjmon_file.read(), bobjui_file.read()]
+    return [bobjpc_file.read(), bobjmon_file.read(), bobjui_file.read()], [mario_pal_aura, luigi_pal_aura]
 
 def assign_eobj_colors(bros_colors, koopa_colors, default_buttons, eobjsave_file, overlay_data, overlay_offsets): # filedata, palette groups
     mario_pal_0 = struct.pack('<4H', *generate_color_lists(PAL_0_CHOICES[bros_colors[0]]))
@@ -640,11 +806,36 @@ def assign_eobj_colors(bros_colors, koopa_colors, default_buttons, eobjsave_file
         eobjsave_file.write(koopa_pal_4)
         eobjsave_file.seek(0xB * 2, 1)
         eobjsave_file.write(koopa_pal_4_dark)
+        
+
+        overlay_data_group.seek(overlay_offsets[1] + (0x4 * 4)) # grabbing the bros ui colors
+        overlay_data_file.seek(overlay_offsets[0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+        pal_off = int.from_bytes(overlay_data_file.read(4), 'little')
+
+        eobjsave_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[0]][0])) * 2))
+        mario_pal_ui = struct.pack('<14H', *generate_shifted_colors(eobjsave_file.read(0xE * 2), PAL_ML_UI_CHOICES[bros_colors[0]]))
+
+        eobjsave_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[2]][0])) * 2))
+        luigi_pal_ui = struct.pack('<14H', *generate_shifted_colors(eobjsave_file.read(0xE * 2), PAL_ML_UI_CHOICES[bros_colors[2]]))
+
+        eobjsave_file.seek(pal_off + 4 + ((0x12 + (0x10 * PAL_KP_UI_CHOICES[koopa_colors[0]][0])) * 2))
+        koopa_pal_ui = struct.pack('<14H', *generate_shifted_colors(eobjsave_file.read(0xE * 2), PAL_KP_UI_CHOICES[koopa_colors[0]]))
+
+        for i in [0x4, 0x7]: # char ui
+            overlay_data_group.seek(overlay_offsets[1] + (i * 4))
+            overlay_data_file.seek(overlay_offsets[0] + (int.from_bytes(overlay_data_group.read(2), 'little') * 4) + 4)
+
+            eobjsave_file.seek(int.from_bytes(overlay_data_file.read(4), 'little') + 4 + (0x12 * 2))
+            eobjsave_file.write(mario_pal_ui)
+            eobjsave_file.seek(0x2 * 2, 1)
+            eobjsave_file.write(luigi_pal_ui)
+            eobjsave_file.seek(0x2 * 2, 1)
+            eobjsave_file.write(koopa_pal_ui)
 
     eobjsave_file.seek(0)
     return [eobjsave_file.read()]
 
-def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, overlay_data, overlay_offsets): # fobj, fobjpc, fobjmon | filedata, palette groups
+def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, overlay_data, overlay_offsets, fdfx_pal_file, aura_pal): # fobj, fobjpc, fobjmon | filedata, palette groups
     mario_pal_0 = struct.pack('<4H', *generate_color_lists(PAL_0_CHOICES[bros_colors[0]]))
     mario_pal_1 = struct.pack('<4H', *generate_color_lists(PAL_1_CHOICES[bros_colors[1]]))
     if bros_colors[4]:
@@ -664,8 +855,10 @@ def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, o
     mario_pal_2 = struct.pack('<5H', *generate_color_lists(PAL_2_CHOICES[bros_colors[0]]))
     if bros_colors[4]:
         mario_pal_2a = struct.pack('<7H', *generate_color_lists(PAL_2A_CHOICES[bros_colors[0]] + PAL_2C_CHOICES[bros_colors[1]]))
+        mario_pal_2b = struct.pack('<2H', *generate_color_lists(PAL_2B_CHOICES[bros_colors[0]]))
     else:
         mario_pal_2a = struct.pack('<7H', *generate_color_lists(PAL_2A_CHOICES[bros_colors[0]] + PAL_2B_CHOICES[bros_colors[0]]))
+        mario_pal_2b = struct.pack('<2H', *generate_color_lists(PAL_2C_CHOICES[bros_colors[1]]))
     luigi_pal_2 = struct.pack('<5H', *generate_color_lists(PAL_2_CHOICES[bros_colors[2]]))
     if bros_colors[5]:
         luigi_pal_2a = struct.pack('<7H', *generate_color_lists(PAL_2A_CHOICES[bros_colors[2]] + PAL_2C_CHOICES[bros_colors[3]]))
@@ -684,6 +877,7 @@ def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, o
     fobj_file = BytesIO(fobj_files[0])
     fobjpc_file = BytesIO(fobj_files[1])
     fobjmon_file = BytesIO(fobj_files[2])
+    fdfx_pal_file = BytesIO(fdfx_pal_file)
     overlay_data = BytesIO(overlay_data)
 
     overlay_data.seek(overlay_offsets[0][1] + (0x35 * 4)) # randoglobin
@@ -708,6 +902,17 @@ def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, o
     fobj_file.write(koopa_pal_3)
     fobj_file.seek(0x6 * 2, 1)
     fobj_file.write(koopa_pal_0A)
+
+    overlay_data.seek(overlay_offsets[0][1] + (0x6 * 4)) # blocks
+    overlay_data.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
+
+    fobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0x51 * 2))
+    fobj_file.write(bytes([mario_pal_1[i] for i in [6, 7, 4, 5, 2, 3, 0, 1]]))
+    fobj_file.write(mario_pal_2b)
+
+    fdfx_pal_file.seek(0x2046) # blue shell block particle
+    fdfx_pal_file.write(bytes([mario_pal_1[i] for i in [6, 7, 4, 5, 2, 3, 0, 1]]))
+    fdfx_pal_file.write(mario_pal_2b)
 
     overlay_data.seek(overlay_offsets[0][1] + (0x59 * 4)) # rump command boat side view
     overlay_data.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
@@ -735,6 +940,12 @@ def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, o
     fobj_file.seek(0x29 * 2, 1)
     fobj_file.write(bytes([mario_pal_2a[i] for i in [12, 13]]))
     fobj_file.write(bytes([luigi_pal_2a[i] for i in [12, 13]]))
+
+    overlay_data.seek(overlay_offsets[0][1] + (0xb2 * 4)) # blue koopas
+    overlay_data.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
+
+    fobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0xA * 2))
+    fobj_file.write(bytes([mario_pal_1[i] for i in [0, 1, 4, 5]]))
 
     overlay_data.seek(overlay_offsets[0][1] + (0x110 * 4)) # idk but there's bros sprites here
     overlay_data.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
@@ -983,10 +1194,24 @@ def assign_fobj_colors(bros_colors, koopa_colors, default_buttons, fobj_files, o
         fobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0xC * 2))
         fobj_file.write(bytes([luigi_pal_2[i] for i in [2, 3, 4, 5, 6, 7, 8, 9]]))
 
+
+        mario_pal_aura, luigi_pal_aura = aura_pal
+
+        overlay_data.seek(overlay_offsets[0][1] + (0x31 * 4)) # light balls
+        overlay_data.seek(overlay_offsets[0][0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
+
+        fobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0x5 * 2))
+        fobj_file.write(bytes([luigi_pal_aura[i] for i in [8, 9, 4, 5, 0, 1]]))
+        fobj_file.write(bytes([0xFF, 0x7F]))
+        fobj_file.write(bytes([mario_pal_aura[i] for i in [8, 9, 4, 5, 0, 1]]))
+        fobj_file.seek(0x3 * 2, 1)
+        fobj_file.write(bytes([0xFF, 0x7F]))
+
     fobj_file.seek(0)
     fobjpc_file.seek(0)
     fobjmon_file.seek(0)
-    return [fobj_file.read(), fobjpc_file.read(), fobjmon_file.read()]
+    fdfx_pal_file.seek(0)
+    return [fobj_file.read(), fobjpc_file.read(), fobjmon_file.read()], fdfx_pal_file.read()
 
 def assign_mobj_colors(bros_colors, koopa_colors, default_buttons, mobj_file, overlay_data, overlay_offsets): # filedata, palette groups
     mario_pal_0 = struct.pack('<4H', *generate_color_lists(PAL_0_CHOICES[bros_colors[0]]))
@@ -1113,9 +1338,56 @@ def assign_mobj_colors(bros_colors, koopa_colors, default_buttons, mobj_file, ov
         mobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0x9 * 2))
         mobj_file.write(bytes([luigi_pal_2a[i] for i in [10, 11]]))
         mobj_file.write(bytes([luigi_pal_0[i] for i in [0, 1, 2, 3]]))
+        
+
+        overlay_data.seek(overlay_offsets[1] + (0x9 * 4)) # grabbing the bros ui colors
+        overlay_data.seek(overlay_offsets[0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
+        pal_off = int.from_bytes(overlay_data.read(4), 'little')
+
+        mobj_file.seek(pal_off + 4 + ((0x2 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[0]][0])) * 2))
+        mario_pal_ui = struct.pack('<14H', *generate_shifted_colors(mobj_file.read(0xE * 2), PAL_ML_UI_CHOICES[bros_colors[0]]))
+
+        mobj_file.seek(pal_off + 4 + ((0x2 + (0x10 * PAL_ML_UI_CHOICES[bros_colors[2]][0])) * 2))
+        luigi_pal_ui = struct.pack('<14H', *generate_shifted_colors(mobj_file.read(0xE * 2), PAL_ML_UI_CHOICES[bros_colors[2]]))
+
+        mobj_file.seek(pal_off + 4 + ((0x2 + (0x10 * PAL_KP_UI_CHOICES[koopa_colors[0]][0])) * 2))
+        koopa_pal_ui = struct.pack('<14H', *generate_shifted_colors(mobj_file.read(0xE * 2), PAL_KP_UI_CHOICES[koopa_colors[0]]))
+
+        for i in [0x9, 0xA, 0x20, 0x4A]: # char ui
+            overlay_data.seek(overlay_offsets[1] + (i * 4))
+            overlay_data.seek(overlay_offsets[0] + (int.from_bytes(overlay_data.read(2), 'little') * 4) + 4)
+
+            mobj_file.seek(int.from_bytes(overlay_data.read(4), 'little') + 4 + (0x2 * 2))
+            mobj_file.write(mario_pal_ui)
+            mobj_file.seek(0x2 * 2, 1)
+            mobj_file.write(luigi_pal_ui)
+            mobj_file.seek(0x2 * 2, 1)
+            mobj_file.write(koopa_pal_ui)
+
+
+        menu_text_colors = bytearray()
+        if PAL_ML_UI_CHOICES[bros_colors[2]][4]: menu_text_colors.extend([0xFF, 0x7F])
+        else: 
+            mobj_file.seek(pal_off + 4 + (0x11 * 2))
+            menu_text_colors.extend(mobj_file.read(2))
+        menu_text_colors.extend([luigi_pal_ui[0x16], luigi_pal_ui[0x17]])
+        if PAL_ML_UI_CHOICES[bros_colors[0]][4]: menu_text_colors.extend([0xFF, 0x7F])
+        else: 
+            mobj_file.seek(pal_off + 4 + (0x11 * 2))
+            menu_text_colors.extend(mobj_file.read(2))
+        menu_text_colors.extend([mario_pal_ui[0x16], mario_pal_ui[0x17]])
+        if PAL_KP_UI_CHOICES[koopa_colors[0]][4]: menu_text_colors.extend([0xFF, 0x7F])
+        else: 
+            mobj_file.seek(pal_off + 4 + (0x11 * 2))
+            menu_text_colors.extend(mobj_file.read(2))
+        menu_text_colors.extend([koopa_pal_ui[0x16], koopa_pal_ui[0x17]])
+    
+    else:
+        
+        menu_text_colors = None
 
     mobj_file.seek(0)
-    return [mobj_file.read()]
+    return [mobj_file.read()], menu_text_colors
 
 # ============================================================================================================================
 
@@ -1245,7 +1517,7 @@ PAL_KP_4_CHOICES = [ # koopa button
     "#a63500 #c75d00 #ef7b00 #f79c14 #f7c624", # button - bowser
     "#203078 #384890 #4860b0 #6878d0 #7898e0", # button - dark bowser
     "#009020 #00b020 #00d840 #18f868 #a8f878", # button - king koopa
-    "#606878 #90a0a8 #a8b8c0 #d0e0e8 #ffffff", # button - dry bowser
+    "#686848 #a09070 #b8a888 #e0d0b0 #e8e8e0", # button - dry bowser
     "#881860 #b82078 #d82078 #f04898 #f880b8", # button - midbus
     "#980040 #c00000 #d80000 #f81810 #ff7d45", # button - king dedede
     "#701800 #c03000 #f05000 #ff7020 #ff9848", # button - meowser
@@ -1261,6 +1533,61 @@ PAL_KP_4A_CHOICES = [ # koopa extra
     "#ffc090", # extra - king dedede
     "#ffd0b0", # extra - meowser
     "#ffd8ff", # extra - misc
+]
+
+PAL_ML_UI_CHOICES = [ # color base | hue shift | saturation shift | lightness shift | use light text
+    [0,    0,    0,    0,  True], # UI - mario
+    [1,    0,    0,    0,  True], # UI - luigi
+    [0,   40,   10,    0,  True], # UI - wario
+    [0,  -90,  -20,    0,  True], # UI - waluigi
+    [1,   70,  -40,   40, False], # UI - fire mario
+    [1,   60,   60,   20,  True], # UI - ice luigi
+    [2,    0,    0,    0,  True], # UI - misc 1
+    [0,   35,   40,   30, False], # UI - misc 2
+]
+
+PAL_ML_UI_CHOICES_1 = [ # color base | hue shift | saturation shift | lightness shift
+    None,                  # UI - mario
+    None,                  # UI - luigi
+    None,                  # UI - wario
+    None,                  # UI - waluigi
+    None,                  # UI - fire mario
+    None,                  # UI - ice luigi
+    None,                  # UI - misc 1
+    None,                  # UI - misc 2
+]
+
+PAL_KP_UI_CHOICES = [ # color base | hue shift | saturation shift | lightness shift | use light text
+    [2,    0,    0,    0,  True], # UI - bowser
+    [2, -165,  -40,  -10,  True], # UI - dark bowser
+    [1,    0,    0,    0,  True], # UI - king koopa
+    [0,   40,  -70,   40, False], # UI - dry bowser
+    [1,  180,   20,   10,  True], # UI - midbus
+    [0,    0,    0,    0,  True], # UI - king dedede
+    [2,   -5,  -10,   -5,  True], # UI - meowser
+    [1,  150,   50,   30,  True], # UI - misc
+]
+
+PAL_KP_UI_CHOICES_1 = [ # color base | hue shift | saturation shift | lightness shift
+    None,                  # UI - bowser
+    [2, -170,  -20,  -10], # UI - dark bowser
+    None,                  # UI - king koopa
+    None,                  # UI - dry bowser
+    [1,  180,  -20,   20], # UI - midbus
+    None,                  # UI - king dedede
+    None,                  # UI - meowser
+    None,                  # UI - misc
+]
+
+PAL_ML_AURA_CHOICES = [ # color base | hue shift | saturation shift | lightness shift
+    [0,    0,    0,    0], # aura - mario
+    [1,    0,    0,    0], # aura - luigi
+    [1, -100,   60,    0], # aura - wario
+    [1,  120,    0,    0], # aura - waluigi
+    [0, -165,  -80,   15], # aura - fire mario
+    [1,   55,    0,   15], # aura - ice luigi
+    [0,   25,    0,    0], # aura - misc 1
+    [0,   35,   50,   20], # aura - misc 2
 ]
 
 
@@ -1333,6 +1660,33 @@ def generate_darkened_color_lists(pal_list):
         for i in range(3):
             wow[i] >>= 1
             bgr555_entry += (wow[i] >> 3) << (i * 5)
+        bgr555.append(bgr555_entry)
+    return bgr555
+
+def generate_shifted_colors(pal_struct, pal_choice_data, fix_first_color = False, is_victory_platform = False):
+    col_num = len(pal_struct) // 2
+    color_list = list(struct.unpack(f'<{col_num}H', pal_struct))
+    if pal_choice_data[0] == 2 and is_victory_platform:
+        shade_color = color_list.pop(3)
+        color_list.append(shade_color)
+    bgr555 = []
+    for i, color in enumerate(color_list):
+        r, g, b = [((color >> (5 * i)) & 0x1F) / 31 for i in range(3)]
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        new_h = (h + (pal_choice_data[1] / 360.0)) % 1.0
+        new_s = max(0.0, min(1.0, s + (pal_choice_data[2] / 100.0)))
+        new_l = max(0.0, min(1.0, l + (pal_choice_data[3] / 100.0)))
+
+        if i == 0 and fix_first_color:
+            new_s = s
+            new_l = l
+
+        new_r, new_g, new_b = colorsys.hls_to_rgb(new_h, new_l, new_s)
+
+        bgr555_entry = 0
+        for j in range(3):
+            bgr555_entry += int([new_r, new_g, new_b][j] * 31) << (j * 5)
         bgr555.append(bgr555_entry)
     return bgr555
 
