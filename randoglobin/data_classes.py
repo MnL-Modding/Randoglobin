@@ -4,6 +4,7 @@ from math import ceil
 
 from mnlscript.bis import add_coins, add_items
 def thingy(): pass
+import mnlscript
 mnlscript.bis.text.emit_text_entry = thingy
 
 class Treasure:

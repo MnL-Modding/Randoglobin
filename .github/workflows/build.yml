@@ -52,7 +52,6 @@ jobs:
           user-package-configuration-file: "randoglobin.nuitka-package.config.yml"
           windows-console-mode: hide
           windows-icon-from-ico: "randoglobin/files/ico_randoglobin.ico"
-          nofollow-import-to: mnlscript.bis.text
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
