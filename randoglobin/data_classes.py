@@ -4,6 +4,14 @@ from math import ceil
 
 import importlib
 import mnlscript.bis.text
+import sys
+
+if 'mnlscript.bis.text' in sys.modules:
+    del sys.modules['mnlscript.bis.text']
+if 'mnlscript.bis' in sys.modules:
+    del sys.modules['mnlscript.bis']
+
+import mnlscript.bis.text
 mnlscript.bis.text.TT = None
 
 import mnlscript.bis
