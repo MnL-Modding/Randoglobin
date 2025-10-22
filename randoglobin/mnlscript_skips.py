@@ -1,10 +1,20 @@
 from mnllib import *
 from mnllib.bis import *
+
+import sys
+import os
+import importlib.util
+
+import randoglobin.mnlscript_bis_text_patched
+
+sys.modules['mnlscript.bis.text'] = randoglobin.mnlscript_bis_text_patched
+
 from mnlscript import label, return_, CodeCommandWithOffsets, update_commands_with_offsets, SubroutineExt
 from mnlscript.bis import Variables, Actors, StackTopModification, StackPopCondition, Sound
 from mnlscript.bis.commands import *
 
 from typing import cast
+from copy import deepcopy
 import mnlscript
 import functools
 import inspect
