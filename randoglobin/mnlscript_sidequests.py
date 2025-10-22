@@ -1,21 +1,5 @@
 from mnllib import *
 from mnllib.bis import *
-
-import importlib
-import mnlscript.bis.text
-import sys
-
-if 'mnlscript.bis.text' in sys.modules:
-    del sys.modules['mnlscript.bis.text']
-if 'mnlscript.bis' in sys.modules:
-    del sys.modules['mnlscript.bis']
-
-import mnlscript.bis.text
-mnlscript.bis.text.TT = None
-
-import mnlscript.bis
-importlib.reload(mnlscript.bis)
-
 from mnlscript import label, return_, CodeCommandWithOffsets, update_commands_with_offsets, SubroutineExt
 from mnlscript.bis import Variables, Actors, StackTopModification, StackPopCondition, Sound
 from mnlscript.bis.commands import *

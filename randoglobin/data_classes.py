@@ -2,22 +2,7 @@ import struct
 from io import BytesIO
 from math import ceil
 
-import importlib
-import mnlscript.bis.text
-import sys
-
-if 'mnlscript.bis.text' in sys.modules:
-    del sys.modules['mnlscript.bis.text']
-if 'mnlscript.bis' in sys.modules:
-    del sys.modules['mnlscript.bis']
-
-import mnlscript.bis.text
-mnlscript.bis.text.TT = None
-
-import mnlscript.bis
-importlib.reload(mnlscript.bis)
-
-from mnlscript.bis import add_coins, add_items
+from mnllib import CodeCommand, Variable
 
 class Treasure:
     def __init__(self):
@@ -97,9 +82,9 @@ class Treasure:
         return self.item
     def to_script_command(self):
         if self.item > 0xEFFF:
-            return add_coins([1, 5, 10, 50, 100][self.quantity] * self.max_hits)
+            return CodeCommand(0x0041, [[1, 5, 10, 50, 100][self.quantity] * self.max_hits], Variable(0x1007))
         else:
-            return add_items(self.item, (self.quantity + 1) * self.max_hits)
+            return CodeCommand(0x0044, [self.item, (self.quantity + 1) * self.max_hits], Variable(0x1007))
 
 class MapMetadata:
     def __init__(self, data):
