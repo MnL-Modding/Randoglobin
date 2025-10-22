@@ -55,6 +55,11 @@ def get_meswin_size(mes, font):
     return (h - 1, v - 1)
 
 def randomize_treasure(parent, seed, settings, treasure_file, shops_file, fevent_manager, arm9, item_tables_offset, badge_patch_offset, map_metadata_offset, map_group_offset, treasure_data_offset, map_icon_data_offset, shop_table_offset, overlays, treasure_strings, place_text, badge_names, all_item_text, font_file, spoiler_file):
+    coin_string = [None] * 6
+    for i in range(6):
+        if fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i] is not None:
+            coin_string[i] = fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i].entries[0x2D] # "You got 10 coins!"
+    
     random.seed(seed)
     save = treasure_file
 
@@ -274,9 +279,9 @@ def randomize_treasure(parent, seed, settings, treasure_file, shops_file, fevent
         if badge_dict:
             for key, value in badge_dict.items():
                 spoiler_file += f"\n{badge_names[(key - 0x3000) * 3]}: " + value
-    
+
     arm9.seek(0)
-    return *return_list, overlays[0], arm9.read(), spoiler_file
+    return *return_list, overlays[0], arm9.read(), spoiler_file, coin_string # "You got 10 coins!"
 
 
 def set_item_prices(arm9, item_tables_offset, item_list):
