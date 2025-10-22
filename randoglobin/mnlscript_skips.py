@@ -1,11 +1,12 @@
 from mnllib import *
 from mnllib.bis import *
 from mnlscript import label, return_, CodeCommandWithOffsets, update_commands_with_offsets, SubroutineExt
+
+import mnlscript.bis.text
+mnlscript.bis.text.TT = None
+
 from mnlscript.bis import Variables, Actors, StackTopModification, StackPopCondition, Sound
 from mnlscript.bis.commands import *
-def thingy(): pass
-import mnlscript
-mnlscript.bis.text.emit_text_entry = thingy
 
 from typing import cast
 import mnlscript

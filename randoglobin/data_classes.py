@@ -2,10 +2,10 @@ import struct
 from io import BytesIO
 from math import ceil
 
+import mnlscript.bis.text
+mnlscript.bis.text.TT = None
+
 from mnlscript.bis import add_coins, add_items
-def thingy(): pass
-import mnlscript
-mnlscript.bis.text.emit_text_entry = thingy
 
 class Treasure:
     def __init__(self):
