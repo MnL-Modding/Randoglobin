@@ -16,7 +16,7 @@ from functools import partial
 import ndspy.rom
 import ndspy.codeCompression
 from PySide6 import QtCore, QtGui, QtMultimedia, QtWidgets
-from mnllib import CodeCommand
+from mnllib import CodeCommand, ArrayCommand, MnLDataTypes
 from mnllib.bis import FEventScriptManager, BattleScriptManager, LanguageTable, TextTable, BIS_ENCODING
 
 from randoglobin.constants import *
@@ -727,8 +727,8 @@ class MainWindow(QtWidgets.QMainWindow):
         globin = QtWidgets.QLabel()
         globin.setFixedWidth(16)
         globin.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        probability = 1 + (hash(seed) % 14)
-        random.seed(seed + str(len(self.globin_list)))
+        probability = 1 + (seed % 14)
+        random.seed(seed + len(self.globin_list))
         if random.randint(0, probability) == 0:
             match random.randint(0, 2):
                 case 0: globin_icon = QtGui.QIcon(str(FILES_DIR / 'ico_spritoglobin.ico'))
@@ -837,10 +837,10 @@ class MainWindow(QtWidgets.QMainWindow):
         err.exec()
 
 class RandoWorker(QtCore.QObject):
-    log = QtCore.Signal(str, str)
+    log = QtCore.Signal(int, str)
     finished = QtCore.Signal()
     failed = QtCore.Signal()
-    error = QtCore.Signal(str, str, bool)
+    error = QtCore.Signal(str, int, bool)
 
     def __init__(self, parent):
         super().__init__()
@@ -855,9 +855,16 @@ class RandoWorker(QtCore.QObject):
 
             write_spoiler_file = self.parent.write_spoiler.isChecked()
             if self.parent.custom_seed.text() == "":
-                seed = str(random.randint(0, 0xFFFFFFFF))
+                seed = random.randint(-0x80000000, 0x7FFFFFFF)
             else:
-                seed = self.parent.custom_seed.text()
+                try:
+                    seed = int(self.parent.custom_seed.text()) & 0xFFFFFFFF
+                    if seed & 0x80000000 != 0: seed -= 0x100000000
+                    print(f"seed was a number, new seed is {seed}")
+                except:
+                    seed = hash(self.parent.custom_seed.text()) & 0xFFFFFFFF
+                    if seed & 0x80000000 != 0: seed -= 0x100000000
+                    print(f"seed was a string, new seed is {seed}")
             
             print(f"seed = {seed}")
 
@@ -1302,7 +1309,7 @@ class RandoWorker(QtCore.QObject):
             #     arm9.seek(0)
             #     arm9_data = arm9.read()
 
-            if any([endless_arm, challenge_medal]):
+            if any([endless_arm, challenge_medal, no_music]):
                 self.log.emit(seed, "Applying Extras")
                 if endless_arm:
                     arm_center_endless(
@@ -1315,6 +1322,16 @@ class RandoWorker(QtCore.QObject):
                     self.parent.overlay_monster_data.data = challenge_medal_mode(
                         self.parent.overlay_monster_data.data,
                         [0, 0x0000E074][self.rom_base],
+                    )
+
+                if no_music:
+                    for subroutine in self.parent.fevent_manager.fevent_chunks[0x1B][0].subroutines:
+                        for command in subroutine.commands:
+                            if isinstance(command, CodeCommand) and command.command_id == 0x011E and command.arguments[0] == 0x284:
+                                command.arguments[0] = 0x28C
+                    self.parent.fevent_manager.fevent_chunks[0x28C][0].subroutines[0x20].commands[0] = ArrayCommand( # fix coin penalties
+                        MnLDataTypes.U_BYTE,
+                        [0x01, 0x02, 0x02, 0x03, 0x07]
                     )
                                         
             # -----------------------------------------------------------------------------------------------------

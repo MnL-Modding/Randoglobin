@@ -312,6 +312,15 @@ def open_worldify(fevent_manager, debug_mode, map_data_overlay, map_metadata_off
 
     skip_stuff(fevent_manager, debug_mode)
 
+    # remove the restrictions in the mario trash pit intro
+    for chunk_triple in fevent_manager.fevent_chunks:
+        chunk = chunk_triple[0]
+        for subroutine in chunk.subroutines:
+            for command in subroutine.commands:
+                if isinstance(command, CodeCommand) and command.command_id == 0x0008:
+                    if command.result_variable == Variable(0x1000) and command.arguments[0] == 0xF0E:
+                        command.arguments[0] = 0x0
+
     # fix an issue of the broque shop map not being uncovered on the minimap
     overlay3 = BytesIO(map_data_overlay)
     overlay3.seek(map_metadata_offset + (12 * 0x46))

@@ -53,7 +53,8 @@ def apply_arm_patches(rom, patches_needed):
             patches_to_use.extend(['-definelabel', 'F_IMPOSSIBLE_MODE', '1'])
         if patches_needed["no_music"]:
             patches_to_use.extend(['-definelabel', 'F_NO_MUSIC', '1'])
-        patches_to_use.extend(['-definelabel', 'F_YOGORE_BLITTY_COUNT', '1'])
+        #patches_to_use.extend(['-definelabel', 'F_DEBUG_MODE', '1'])
+        #patches_to_use.extend(['-definelabel', 'F_YOGORE_BLITTY_COUNT', '1'])
 
         try:
             subprocess.run(
