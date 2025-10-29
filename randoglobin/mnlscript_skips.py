@@ -746,7 +746,7 @@ def funny_bone_skips(fevent_manager):
         emit_command(0x018C, [Variables[0x3008], 0x00C0], Variables[0x1007])
 
         label('awaken_bowser_other_screen_4', manager = fevent_manager)
-        Variables[0x1000] = 0x3
+        Variables[0x1000] = 0x0
         branch_if(Variables[0x3008], '==', 0x1, 'awaken_bowser_other_screen_5', invert=True)
         Variables[0x1000] = Variables[0x1000] | 0xC0
 
@@ -872,7 +872,9 @@ def plack_beach_skips(fevent_manager):
 
     @subroutine(subs = script.subroutines, hdr = script.header, init = True)
     def broque_encounter_check(sub: Subroutine): # TODO: i can get rid of this gear shit once the vacuum block cutscene is redone
-        get_actor_attribute(Actors.BOWSER, ActorAttribute.Y_POSITION, res=Variables[0x1000])
+        get_actor_attribute(Variables[0x3000], ActorAttribute.X_POSITION, res=Variables[0x1000])
+        branch_if(Variables[0x1000], '<', 100, 'bowser_is_entering') # go to normal init
+        get_actor_attribute(Variables[0x3000], ActorAttribute.Y_POSITION, res=Variables[0x1000])
         branch_if(Variables[0x1000], '<', 150, 'bowser_is_entering') # go to normal init
         set_player_stat(Actors.BOWSER, PlayerStat.GEAR_PIECE_1, Variables[0x5000])
         set_player_stat(Actors.BOWSER, PlayerStat.GEAR_PIECE_2, Variables[0x5001])
