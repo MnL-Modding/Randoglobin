@@ -1,29 +1,29 @@
 - module-name: "randoglobin"
   anti-bloat:
-    no-auto-follow:
-      "rustimport": "Rust modules not being able to be compiled live"
+    - no-auto-follow:
+        "rustimport": "Rust modules not being able to be compiled live"
   data-files:
-    dirs:
-      - "files"
-      - "lang"
+    - dirs:
+        - "files"
+        - "lang"
   dlls:
     - from_filenames:
         relative_path: "files"
         prefixes:
           - "armips"
         executable: "yes"
-        when: "win32"
+      when: "win32"
 
 - module-name: "cached_path.schemes"
   anti-bloat:
-    description: "remove unnecessary dependencies"
-    no-auto-follow:
-      "beaker": "ignore"
-    replacements_re:
-      'from \.(?:gs|hf|r2|s3) import .*': ""
-      'for client in \(.*\):': "for client in (HttpClient,):"
+    - description: "remove unnecessary dependencies"
+      no-auto-follow:
+        "beaker": "ignore"
+      replacements_re:
+        'from \.(?:gs|hf|r2|s3) import .*': ""
+        'for client in \(.*\):': "for client in (HttpClient,):"
 - module-name: "cached_path._cached_path"
   anti-bloat:
-    description: "remove unnecessary dependencies"
-    replacements_plain:
-      "hf_get_from_cache,": ""
+    - description: "remove unnecessary dependencies"
+      replacements_plain:
+        "hf_get_from_cache,": ""
