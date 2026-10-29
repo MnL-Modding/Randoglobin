@@ -9,6 +9,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from randoglobin.constants import *
 from randoglobin.data_classes import Treasure, ShopList, MapMetadata
 from randoglobin.mnlscript_sidequests import assemble_blitty_rewards, assemble_mushroom_derby, assemble_hide_seek_toad, assemble_kuzzle_puzzles
+from randoglobin.key_items import ITEM_LIST as KEY_ITEM_LIST, UNSUPPORTED_UI as KEY_ITEMS_UNSUPPORTED_UI
 from randoglobin.image import create_BObj_sprite, create_MObj_sprite, interpret_character, generate_sprites_from_sheet
 
 # =========================================================================================================================
@@ -625,7 +626,7 @@ class TreasureTab(QtWidgets.QWidget):
         line.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Ignored)
         line_layout.addWidget(line)
 
-        line_layout.addWidget(QtWidgets.QLabel(f'{self.tr("Important Items")} (NYI)'))
+        line_layout.addWidget(QtWidgets.QLabel(self.tr("Important Items")))
 
         line = QtWidgets.QFrame()
         line.setFrameShape(QtWidgets.QFrame.HLine)
@@ -757,30 +758,16 @@ class TreasureTab(QtWidgets.QWidget):
         self.rando_bshop.setChecked(True)
         # self.rando_bird.setEnabled(False)
 
-        self.rando_key_r.setEnabled(False)
-        self.rando_key_b.setEnabled(False)
-        self.rando_key_g.setEnabled(False)
-        self.rando_bill.setEnabled(False)
-
-        self.rando_cure_r.setEnabled(False)
-        self.rando_cure_y.setEnabled(False)
-        self.rando_cure_g.setEnabled(False)
-        self.rando_stingler.setEnabled(False)
-
-        self.rando_hammer.setEnabled(False)
-        self.rando_mini.setEnabled(False)
-        self.rando_spin.setEnabled(False)
-        self.rando_drill.setEnabled(False)
-
-        self.rando_flame.setEnabled(False)
-        self.rando_slide.setEnabled(False)
-        self.rando_slam.setEnabled(False)
-        self.rando_spike.setEnabled(False)
-
-        self.rando_vent.setEnabled(False)
-        self.rando_shell.setEnabled(False)
-        self.rando_vacuum.setEnabled(False)
-        self.rando_badge.setEnabled(False)
+        # important items: shuffled among each other's original spots with logic (see key_items.py)
+        for item in KEY_ITEM_LIST:
+            checkbox = getattr(self, item.ui)
+            checkbox.setEnabled(True)
+            checkbox.setChecked(False)
+            checkbox.setToolTip(self.tr("Shuffle this item's original reward spot into the key item pool.\nItems are always placed so the game can be finished."))
+        for attribute in KEY_ITEMS_UNSUPPORTED_UI:
+            checkbox = getattr(self, attribute)
+            checkbox.setEnabled(False)
+            checkbox.setToolTip(self.tr("Not supported yet: the story moves forward on its own flags here,\nso shuffling this item wouldn't change anything."))
     
     def get_check_string(self, amt):
         if amt == 1:

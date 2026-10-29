@@ -21,7 +21,8 @@ from mnllib.bis import FEventScriptManager, BattleScriptManager, LanguageTable, 
 
 from randoglobin.constants import *
 from randoglobin.patch import ExtrasTab, skip_intro, remove_enemies, multiply_exp, change_start_level, open_worldify, challenge_medal_mode
-from randoglobin.treasure import TreasureTab, randomize_treasure
+from randoglobin.treasure import TreasureTab, randomize_treasure, get_meswin_size
+from randoglobin.key_items import randomize_key_items, ITEM_LIST as KEY_ITEM_LIST
 from randoglobin.palette import PaletteTab, randomize_colors
 from randoglobin.music import MusicTab, randomize_music
 from randoglobin.image import create_MObj_sprite, create_textbox, generate_staff_roll
@@ -1113,6 +1114,27 @@ class RandoWorker(QtCore.QObject):
                     debug_mode,
                     self.parent.overlay_field_data.data,
                     [0, 0x000098A0][self.rom_base],
+                )
+
+            if rand_treasure and any(getattr(self.parent.treasure_settings, item.ui).isChecked() for item in KEY_ITEM_LIST):
+                self.log.emit(seed, "Randomizing Key Items")
+                got_item_template = (
+                    # "You got 5 Super Nuts!" in every language, and the "Super Nuts" inside it (same string treasure.py swaps)
+                    [self.parent.fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i].entries[0x32]
+                     if self.parent.fevent_manager.fevent_chunks[0x0128][2].text_tables[0x43 + i] is not None else None
+                     for i in range(6)],
+                    [all_item_names[i][1][40] if all_item_names[i] is not None else None for i in range(6)],
+                )
+                spoiler_file = randomize_key_items(
+                    seed,
+                    self.parent.treasure_settings,
+                    self.parent.fevent_manager,
+                    got_item_template,
+                    lambda string: get_meswin_size(string, self.parent.font_file),
+                    spoiler_file,
+                    open_world = unlinear,
+                    start_with_all = debug_mode,
+                    log = lambda message: self.log.emit(seed, message),
                 )
 
             coins_string = None
